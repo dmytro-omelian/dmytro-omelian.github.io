@@ -19,7 +19,7 @@ const experiments = [
             "(1) Focus on only 3 main problems.\n(2) Prioritize them as your top tasks that need immediate attention.\n(3) Select tasks that are challenging.",
             "Here, it\'s crucial to cultivate the right mindset and remind yourself each morning, evening, during shower time, etc., that you have to tackle the most important and challenging problem. If you find it difficult, ask yourself why, reflect, and try again.",
             "It's well-known that starting the day by working on the most challenging task is important, but in practice, it's not that easy.",
-            "The challenge in this approach is avoiding the temptation to say, \"Oh, only 3 tasks; I have much more to get done.\" It's important to identify what truly constitutes the top 3 tasks for the day. People tend to set easy, accomplishable tasks and create long backlogs and to-do lists for the day, giving them a false sense of accomplishment. For example, tasks like shopping, calling X, and saying \“hi\” 9 times might serve as distractions when mixed with more substantial items.",
+            "The challenge in this approach is avoiding the temptation to say, 'Oh, only 3 tasks; I have much more to get done.' It's important to identify what truly constitutes the top 3 tasks for the day. People tend to set easy, accomplishable tasks and create long backlogs and to-do lists for the day, giving them a false sense of accomplishment. For example, tasks like shopping, calling X, and saying 'hi' 9 times might serve as distractions when mixed with more substantial items.",
             "When you identify the most challenging problems for the day and see that there are no tasks accomplished, it can be demotivating. However, completing the list provides a sense of achievement.",
             "A good practice is to have at least one problem every 1-2 days that serves as a blocker for specific directions. If you encounter more blockers, prioritize them and address them as soon as possible."
         ],
@@ -63,12 +63,10 @@ const generatePreview = (contentArray, maxLength = 100) => {
 function Posts() {
     const [activeTab, setActiveTab] = useState('posts');
     const [selectedItem, setSelectedItem] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
 
     const handleTabChange = (tab) => {
         setActiveTab(tab);
         setSelectedItem(null);
-        setSearchTerm('');
     };
 
     const handleItemClick = (item) => {
@@ -79,16 +77,8 @@ function Posts() {
         setSelectedItem(null);
     };
 
-    const handleSearchChange = (event) => {
-        setSearchTerm(event.target.value);
-    };
-
-    const filterItemsByTag = (item) => {
-        return item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    };
-
-    const filteredPosts = posts.filter(filterItemsByTag);
-    const filteredExperiments = experiments.filter(filterItemsByTag);
+    const filteredPosts = posts;
+    const filteredExperiments = experiments;
 
     return (
         <div className='posts-container'>

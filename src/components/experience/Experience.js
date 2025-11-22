@@ -44,7 +44,7 @@ function Experience() {
             city: "Kyiv, Ukraine (remote)",
             dates: "Nov 2021 - Dec 2022",
             descriptions: [
-                "Worked on the ALM Octane project, module \“Release Processes\".",
+                "Worked on the ALM Octane project, module \"Release Processes\".",
                 "Designed, supported, and implemented new backend features in close cooperation with different teams. Helped to speed up the time of resource loading by 4x.",
                 "Contributed to CI / CD open-source GitLab, Jenkins, Bamboo, and TeamCity plugins and integrated them into the project."
             ],
@@ -74,7 +74,7 @@ function Experience() {
             dates: "June 2023 - July 2023",
             descriptions: [
                 "Researching and experimenting with eBPF technology, which involves running sandboxed programs within the privileged context of the operating system kernel to enhance kernel capabilities without source code modifications or module loading.",
-                "Didn\'t like, resigned."
+                "Didn't like, resigned."
             ],
             tags: ["Research", "C"]
         },
@@ -140,7 +140,7 @@ function Experience() {
             city: "Kyiv, Ukraine",
             dates: "August 2022 - November 2022",
             descriptions: [
-                "Implemented unit, integration, and e2e tests and did regular code reviews of students' assignments. Worked with design patterns, SOLID \& GRASP principles, DB optimizations, scaling and caching. Layered architecture and microservices, event bus, message broker, Saga, 2PC, and Cloud.",
+                "Implemented unit, integration, and e2e tests and did regular code reviews of students' assignments. Worked with design patterns, SOLID & GRASP principles, DB optimizations, scaling and caching. Layered architecture and microservices, event bus, message broker, Saga, 2PC, and Cloud.",
             ],
             tags: ["TypeScript", "Design Patterns", "Microservices"]
         },

@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import { marked } from 'marked';
 import BooksList2025 from './BooksList2025';
 import BooksList2024 from './BooksList2024';
 import BooksList2023 from './BooksList2023';
@@ -8,14 +6,6 @@ import BooksList2022 from './BooksList2022';
 import './BooksList.css';
 
 function Books() {
-    const [markdown, setMarkdown] = useState('');
-
-    useEffect(() => {
-        fetch('/BOOKS.md')
-            .then(response => response.text())
-            .then(text => setMarkdown(marked(text)));
-    }, []);
-
     return (
         // <div className="markdown-container" dangerouslySetInnerHTML={{ __html: markdown }} />
         <div className="books-list-container">
