@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { marked } from 'marked';
+import BooksList2025 from './BooksList2025';
 import BooksList2024 from './BooksList2024';
 import BooksList2023 from './BooksList2023';
-import './BooksList.css';
 import BooksList2022 from './BooksList2022';
+
+import './BooksList.css';
 
 function Books() {
     const [markdown, setMarkdown] = useState('');
@@ -19,6 +21,7 @@ function Books() {
         <div className="books-list-container">
             <h2 className='books-container-title'>An incomplete list of books that I've been reading lately...</h2>
 
+            <BooksList2025 />
             <BooksList2024 />
             <BooksList2023 />
             <BooksList2022 />

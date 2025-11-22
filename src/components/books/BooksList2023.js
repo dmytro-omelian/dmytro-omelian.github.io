@@ -27,7 +27,7 @@ function BooksList2023() {
             <div className="books-by-year">
                 <h3>2023</h3>
                 <ul>
-                    {books.map((book, index) => (
+                    {books.slice().reverse().map((book, index) => (
                         <li key={index}><u>{book.title}</u> by {book.author}</li>
                     ))}
                 </ul>

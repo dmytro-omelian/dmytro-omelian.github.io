@@ -8,6 +8,7 @@ import Header from './components/header/Header';
 import Footer from './components/footer/Footer';
 import './App.css';
 import Posts from './components/posts/Posts';
+import Contact from './components/contact/Contact';
 
 
 function App() {
@@ -15,13 +16,16 @@ function App() {
     <Router>
       <div className='app-container'>
         <Header />
-        <Routes>
-          <Route path="/" element={<About />} />
-          <Route path="/experience" element={<Experience />} />
-          <Route path="/books" element={<Books />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/blog" element={<Posts />} />
-        </Routes>
+        <main className='content'>
+          <Routes>
+            <Route path="/" element={<About />} />
+            <Route path="/experience" element={<Experience />} />
+            <Route path="/books" element={<Books />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/blog" element={<Posts />} />
+            <Route path="/contact" element={<Contact />} />
+          </Routes>
+        </main>
         <Footer />
       </div>
     </Router>
