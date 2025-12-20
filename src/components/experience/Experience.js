@@ -8,7 +8,7 @@ function Experience() {
             company: "AiSDR",
             dates: "Nov 2023 - Present",
             descriptions: [
-                "Building the leading AI sales platform at a YC-backed startup (S23 batch, raised $3M at $20M valuation)"
+                "Building the leading AI sales platform at a YC-backed startup (S23 batch, raised $3M at $20M valuation)",
             ]
         },
         {
