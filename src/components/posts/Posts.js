@@ -5,7 +5,8 @@ import './Posts.css';
 const posts = [
     {
         id: 1,
-        title: "First one",
+        slug: "trying-to-experiment-with-different-concepts-of-writing",
+        title: "Trying to experiment with different concepts of writing",
         date: "December 20, 2025",
         preview: "Before I've already been writing for the last 400 days, mostly on LinkedIn. A few months ago, I started using X. For now, I'm not sure about my goals...",
         content: [
@@ -30,7 +31,7 @@ function Posts() {
                 {posts.map(post => (
                     <Link
                         key={post.id}
-                        to={`/blog/post/${post.id}`}
+                        to={`/blog/${post.slug}`}
                         className="post-item"
                     >
                         <h3>{post.title}</h3>
@@ -39,15 +40,25 @@ function Posts() {
                     </Link>
                 ))}
             </div>
+            <div className="newsletter-section">
+                <iframe
+                    src="https://domelian.substack.com/embed"
+                    width="480"
+                    height="320"
+                    style={{ border: '1px solid #EEE', background: 'white' }}
+                    frameBorder="0"
+                    scrolling="no"
+                    title="Domelian Newsletter"
+                ></iframe>
+            </div>
         </div>
     );
 }
 
 export function PostDetail() {
-    const { id } = useParams();
-    const numericId = parseInt(id, 10);
+    const { slug } = useParams();
 
-    const item = posts.find(entry => entry.id === numericId);
+    const item = posts.find(entry => entry.slug === slug);
 
     if (!item) {
         return (
@@ -66,6 +77,17 @@ export function PostDetail() {
                 {item.content.map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
                 ))}
+                <div className="newsletter-section">
+                    <iframe
+                        src="https://domelian.substack.com/embed"
+                        width="480"
+                        height="320"
+                        style={{ border: '1px solid #EEE', background: 'white' }}
+                        frameBorder="0"
+                        scrolling="no"
+                        title="Domelian Newsletter"
+                    ></iframe>
+                </div>
             </div>
         </div>
     );
