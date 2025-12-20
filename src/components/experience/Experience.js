@@ -180,6 +180,8 @@ function Experience() {
 
     return (
         <div className='experience-container'>
+            <h1>Education</h1>
+            <p>2020-2024 Kyiv Polytechnic Institute (Software Engineering)</p>
             <h1>Experience</h1>
             {experiences.map((exp, index) => (
                 <div className='experience-box' key={index}>

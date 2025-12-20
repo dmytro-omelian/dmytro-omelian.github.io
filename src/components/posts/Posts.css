@@ -98,6 +98,15 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s ease;
+  width: 100%;
+  height: 320px;
+  max-width: 480px;
+}
+
+@media (max-width: 768px) {
+  .newsletter-section iframe {
+    height: 240px;
+  }
 }
 
 .newsletter-section iframe:hover {

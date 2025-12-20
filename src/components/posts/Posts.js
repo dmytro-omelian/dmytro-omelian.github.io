@@ -43,8 +43,6 @@ function Posts() {
             <div className="newsletter-section">
                 <iframe
                     src="https://domelian.substack.com/embed"
-                    width="480"
-                    height="320"
                     style={{ border: '1px solid #EEE', background: 'white' }}
                     frameBorder="0"
                     scrolling="no"
@@ -80,8 +78,6 @@ export function PostDetail() {
                 <div className="newsletter-section">
                     <iframe
                         src="https://domelian.substack.com/embed"
-                        width="480"
-                        height="320"
                         style={{ border: '1px solid #EEE', background: 'white' }}
                         frameBorder="0"
                         scrolling="no"
