@@ -7,7 +7,7 @@ import Projects from './components/projects/Projects';
 import Header from './components/header/Header';
 import Footer from './components/footer/Footer';
 import './App.css';
-import Posts from './components/posts/Posts';
+import Posts, { PostDetail } from './components/posts/Posts';
 import Contact from './components/contact/Contact';
 
 
@@ -23,6 +23,7 @@ function App() {
             <Route path="/books" element={<Books />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/blog" element={<Posts />} />
+            <Route path="/blog/post/:id" element={<PostDetail />} />
             <Route path="/contact" element={<Contact />} />
           </Routes>
         </main>

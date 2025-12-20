@@ -177,13 +177,6 @@ function Experience() {
                             <li id={index}>{point}</li>
                         ))}
                     </ul>
-                    {exp.tags &&
-                        <div className='tags-box'>
-                            {exp.tags.map((tag, index) => (
-                                <p className="tag" key={index}>{tag}</p>
-                            ))}
-                        </div>
-                    }
                 </div>
             ))}
             <h2 className='margin-top'>Courses & Internships</h2>
@@ -197,13 +190,6 @@ function Experience() {
                             <li id={index}>{point}</li>
                         ))}
                     </ul>
-                    {exp.tags &&
-                        <div className='tags-box'>
-                            {exp.tags.map((tag, index) => (
-                                <p className="tag" key={index}>{tag}</p>
-                            ))}
-                        </div>
-                    }
                 </div>
             ))}
         </div>

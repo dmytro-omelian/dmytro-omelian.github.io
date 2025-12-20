@@ -33,13 +33,11 @@
   text-decoration: underline; /* If you want a hover effect */
 }
 
-/* Responsive styles if needed */
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
+.site-name {
+  text-decoration: none;
+  color: inherit;
+}
 
-  .site-header nav {
-    margin-top: 10px;
-  }
+.site-name:hover {
+  text-decoration: none;
 }

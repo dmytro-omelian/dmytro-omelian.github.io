@@ -1,8 +1,6 @@
-import React from 'react';
 import './Achievements.css';
 
 const newsItems = [
-    { date: "TBD 2024", description: "TBD" },
     { date: "Sep 2023", description: "Winners - AI HOUSE Camp 2023 (team: Hearify)." },
     { date: "May 2023", description: "3-rd place @ SoftServe & LNU Study Smart Hackathon 2023" },
     { date: "2021", description: "1/2 Final of The 2021 ICPC Southeastern Europe Regional Contest." },
