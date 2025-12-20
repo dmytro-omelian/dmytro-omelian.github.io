@@ -5,38 +5,48 @@ function Experience() {
     const experiences = [
         {
             title: "Software Engineer",
-            company: "TBD",
+            company: "AiSDR",
             dates: "Nov 2023 - Present",
-            descriptions: ["Building something people want", "TBD."],
-            tags: ["React", "NestJS"]
+            descriptions: [
+                "Building the leading AI sales platform at a YC-backed startup (S23 batch, raised $3M at $20M valuation)"
+            ]
         },
-        // {
-        //     title: "Program and Event Coordinator",
-        //     company: "Center for Entrepreneurship (CfE), UCU",
-        //     dates: "Feb 2024 - Present",
-        //     descriptions: ["TBD."],
-        // },
+        {
+            title: "Project Manager",
+            company: "Center for Entrepreneurship (CfE), UCU",
+            dates: "Feb 2024 - Oct 2025",
+            descriptions: [
+                "Managed the IdeasLab startup accelerator program at Ukrainian Catholic University",
+                "Coordinated 2 batches of student startups, providing mentorship and guidance",
+                "Led lectures on problem analysis, customer development, and pitching",
+                "Built ideascenter.ucu.edu.ua website as a freelance project",
+                "Served as guest lecturer at Venture Camp Ukraine (3 lectures)"
+            ]
+        },
         {
             title: "Teaching Assistant @ Football Analytics",
             company: "Ukrainian Catholic University",
             dates: "Dec 2023 - Jan 2024",
-            descriptions: ["TBD."],
-            tags: ["Data Analytics", "Python", "Mentorship", "Management"]
+            descriptions: ["Assisted in teaching football analytics course to university students"]
         },
         {
             title: "Co-Founder & COO",
             company: "Hearify",
             dates: "March 2023 - Nov 2023",
-            descriptions: ["TBD."],
-            tags: ["Startup", "Management", "Communications", "Research", "Development"]
+            descriptions: [
+                "Won multiple startup competitions including AI HOUSE Camp 2023 and Student Startup Battle",
+                "Raised $5k grant from Center for Entrepreneurship (CfE) for product development"
+            ]
         },
         {
             title: "Machine Learning Engineer",
             company: "Harmix",
             city: "Kyiv, Ukraine (remote)",
             dates: "Apr 2023 - Aug 2023",
-            descriptions: ["TBD."],
-            tags: ["Python", "Machine Learning", "Audio Processing"]
+            descriptions: [
+                "Worked on audio processing and machine learning models for music technology",
+                "Developed ML solutions for music analysis and processing pipelines"
+            ]
         },
         {
             title: "Junior Software Engineer",
@@ -44,11 +54,11 @@ function Experience() {
             city: "Kyiv, Ukraine (remote)",
             dates: "Nov 2021 - Dec 2022",
             descriptions: [
-                "Worked on the ALM Octane project, module \"Release Processes\".",
-                "Designed, supported, and implemented new backend features in close cooperation with different teams. Helped to speed up the time of resource loading by 4x.",
-                "Contributed to CI / CD open-source GitLab, Jenkins, Bamboo, and TeamCity plugins and integrated them into the project."
-            ],
-            tags: ["Java", "Spring Framework"]
+                "Worked on the ALM Octane project, module \"Release Processes\"",
+                "Designed, supported, and implemented new backend features in close cooperation with different teams",
+                "Helped to speed up the time of resource loading by 4x",
+                "Contributed to CI/CD open-source GitLab, Jenkins, Bamboo, and TeamCity plugins and integrated them into the project"
+            ]
         },
     ];
 
@@ -57,15 +67,19 @@ function Experience() {
             title: "Research Student",
             company: "Anhalt University",
             dates: "Nov 2023 - Jan 2024",
-            descriptions: ["TBD."],
-            tags: ["Computer Vision"]
+            descriptions: [
+                "Conducted research on computer vision and AI applications",
+                "Collaborated on academic research projects during university break"
+            ]
         },
         {
             title: "Machine Learning Intern",
             company: "Center of Responsible AI @ NYU",
             dates: "Sep 2023 - Dec 2023",
-            descriptions: ["TBD."],
-            tags: ["Academic Research", "Machine Learning", "Fairness"]
+            descriptions: [
+                "Worked on responsible AI research and fairness in machine learning models",
+                "Participated in academic research on AI ethics and bias mitigation"
+            ]
         },
         {
             title: "Software Engineer Intern",
@@ -73,10 +87,9 @@ function Experience() {
             city: "Dublin, Ireland (remote)",
             dates: "June 2023 - July 2023",
             descriptions: [
-                "Researching and experimenting with eBPF technology, which involves running sandboxed programs within the privileged context of the operating system kernel to enhance kernel capabilities without source code modifications or module loading.",
-                "Didn't like, resigned."
-            ],
-            tags: ["Research", "C"]
+                "Researched and experimented with eBPF technology for kernel-level networking",
+                "Resigned after determining it wasn't the right fit"
+            ]
         },
         {
             title: "ideasLab Accelerator for Student Startups | Batch 3",
@@ -84,45 +97,42 @@ function Experience() {
             city: "Lviv, Ukraine",
             dates: "March 2022 - May 2022",
             descriptions: [
-                "TBD (winners)",
-            ],
-            tags: ["Startup", "Management", "Communications", "Research", "Development"]
+                "Participated in intensive 12-week startup accelerator program",
+                "Developed entrepreneurial skills and business acumen",
+                "Worked on real startup projects and business model validation"
+            ]
         },
         {
             title: "Natural Language Processing School",
             company: "Gathers",
             dates: "Feb 2023 - March 2023",
             descriptions: [
-                "Learned advanced techniques for processing and analyzing large volumes of text data using PyTorch.",
-                "Gained knowledge of a variety of PyTorch-based NLP models, including Recurrent Neural Networks (RNN), Long Short-Term Memory (LSTM), Gated Recurrent Units (GRU), and Transformers.",
-                "Developed practical skills in building and training NLP models using PyTorch, and implemented projects using these models to classify and analyze text data."
-            ],
-            tags: ["Natural Language Processing"]
+                "Learned advanced techniques for processing and analyzing large volumes of text data using PyTorch",
+                "Mastered various NLP models including RNN, LSTM, GRU, and Transformers",
+                "Developed practical skills in building and training NLP models"
+            ]
         },
         {
             title: "Practical Deep Learning",
             company: "DataRoot Labs",
             dates: "Feb 2023 - March 2023",
             descriptions: [
-                "Developed knowledge of theoretical concepts behind Deep Learning, including mathematical understanding of Neural Networks and implementation in practice.",
-                "Explored PyTorch basics and advanced autograd mechanics, completing two labs to gain hands-on experience in creating, training, and evaluating neural networks.",
-                "Tackled essential problems in Computer Vision such as object classification, segmentation, and detection, using state-of-the-art models like YOLOv3, ResNet, and UNet, through completion of three labs, a Kaggle competition, and a test.",
-                "Didn't complete the course."
-            ],
-            tags: ["Deep Learning", "Computer Vision", "PyTorch"]
+                "Gained deep understanding of theoretical concepts behind Deep Learning and practical implementation in PyTorch",
+                "Completed labs on neural network basics and advanced autograd mechanics",
+                "Worked on computer vision problems including object classification, segmentation, and detection",
+                "Competed in Kaggle competitions and built Flask web applications with Docker deployment"
+            ]
         },
         {
             title: "Data Science Fundamentals",
             company: "DataRoot Labs",
             dates: "May 2022 - September 2022",
             descriptions: [
-                "Got hands-on experience with Python and main data science libraries: NumPy, Pandas, SciPy, and Matplotlib.",
-                "We worked with different modifications of Linear Regression, Logistic Regression, Naive Bayes Classifier, and KNN.",
-                "Were tasked to solve some different real-life machine learning problems and applied our knowledge working on Kaggle competitions.",
-                "Created the guided project using Flask framework and packed it into a container with Docker.",
-                "As a final project, I solved a real-life ML problem to predict whether a patient is likely to get a stroke based on the input parameters, exposed it with REST API, and packed it into a container with Docker (accuracy 0.91)."
-            ],
-            tags: ["Machine Learning", "Python", "Flask"]
+                "Mastered Python and core data science libraries: NumPy, Pandas, SciPy, and Matplotlib",
+                "Applied machine learning algorithms including Linear/Logistic Regression, Naive Bayes, and KNN",
+                "Solved real-world ML problems and competed in Kaggle competitions",
+                "Built and deployed ML models as REST APIs using Flask and Docker"
+            ]
         },
         {
             title: "ideasLab Accelerator for Student Startups | Batch 2",
@@ -130,9 +140,10 @@ function Experience() {
             city: "Lviv, Ukraine",
             dates: "September 2022 - December 2022",
             descriptions: [
-                "Participated in the ideasLab Accelerator for Student Startups program, a 12-week program designed to help student entrepreneurs develop their startups and gain valuable business skills",
-            ],
-            tags: ["Startup", "Management", "Communications", "Research"]
+                "Completed 12-week intensive startup accelerator program for student entrepreneurs",
+                "Developed comprehensive business skills including strategy, marketing, and operations",
+                "Worked on real startup projects and received mentorship from industry experts"
+            ]
         },
         {
             title: "Software Engineering School | Batch 2",
@@ -140,18 +151,20 @@ function Experience() {
             city: "Kyiv, Ukraine",
             dates: "August 2022 - November 2022",
             descriptions: [
-                "Implemented unit, integration, and e2e tests and did regular code reviews of students' assignments. Worked with design patterns, SOLID & GRASP principles, DB optimizations, scaling and caching. Layered architecture and microservices, event bus, message broker, Saga, 2PC, and Cloud.",
-            ],
-            tags: ["TypeScript", "Design Patterns", "Microservices"]
+                "Implemented comprehensive testing strategies: unit, integration, and e2e tests",
+                "Applied software engineering best practices including design patterns, SOLID principles, and GRASP",
+                "Optimized database performance and implemented caching solutions",
+                "Learned scalable architecture, microservices, event-driven systems, and cloud technologies"
+            ]
         },
         {
             title: "Java Camp",
             company: "ELEKs",
             dates: "September 2021 - November 2021",
             descriptions: [
-                "TBD",
-            ],
-            tags: ["Java", "Spring Framework"]
+                "Intensive Java programming bootcamp covering core Java concepts and frameworks",
+                "Decided not to complete the program to focus on other opportunities"
+            ]
         },
         {
             title: "Full-Stack DevOps Intern",
@@ -159,9 +172,10 @@ function Experience() {
             city: "Kyiv, Ukraine",
             dates: "August 2021 - November 2021",
             descriptions: [
-                "TBD",
-            ],
-        }
+                "Gained experience in full-stack development and DevOps practices",
+                "Decided not to complete the program to focus on other opportunities"
+            ]
+        },
     ];
 
     return (
@@ -177,6 +191,13 @@ function Experience() {
                             <li id={index}>{point}</li>
                         ))}
                     </ul>
+                    {exp.tags && (
+                        <ul className='tags-box'>
+                            {exp.tags.map((tag, index) => (
+                                <li id={index}>{tag}</li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             ))}
             <h2 className='margin-top'>Courses & Internships</h2>
