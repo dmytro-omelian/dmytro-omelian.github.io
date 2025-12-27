@@ -34,9 +34,75 @@ li {
   color: #000;
 }
 
-li u {
+.book-title {
+  cursor: default;
+}
+
+.book-title.has-summary {
+  cursor: pointer;
   text-decoration: underline;
   text-decoration-color: green;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
+}
+
+.book-summary-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+}
+
+.book-summary-sidebar {
+  background: #fff;
+  width: 100%;
+  max-width: 400px;
+  height: 100%;
+  padding: 20px 24px;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.book-summary-close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.book-summary-title {
+  margin: 0 0 4px 0;
+}
+
+.book-summary-author {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.book-summary-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.book-summary-text p {
+  margin: 0 0 0.4rem 0;
+}
+
+.book-summary-space {
+  height: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .book-summary-sidebar {
+    max-width: 100%;
+    padding: 16px 18px;
+  }
 }

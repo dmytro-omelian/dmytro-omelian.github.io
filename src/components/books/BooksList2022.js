@@ -9,7 +9,6 @@ const books = [
     { year: 2022, title: 'Знайти час', author: 'Джейк Кнапп, Джон Зерацкі' },
     { year: 2022, title: 'Клуб убивств по четвергах', author: 'Річард Осман' },
     { year: 2022, title: 'Острів Дума', author: 'Стівен Кінг' },
-    { year: 2022, title: '...', author: '...' },
 ];
 
 function BooksList2022() {
@@ -19,7 +18,9 @@ function BooksList2022() {
                 <h3>2022</h3>
                 <ul>
                     {books.slice().reverse().map((book, index) => (
-                        <li key={index}><u>{book.title}</u> by {book.author}</li>
+                        <li key={index}>
+                            <span className="book-title">{book.title}</span> by {book.author}
+                        </li>
                     ))}
                 </ul>
             </div>
