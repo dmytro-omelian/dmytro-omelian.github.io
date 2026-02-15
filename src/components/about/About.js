@@ -20,7 +20,7 @@ function About() {
                     </svg>
                 </a>
                 <a
-                    href="https://x.com/dmytroomelian"
+                    href="https://twitter.com/intent/user?screen_name=dmytroomelian"
                     target="_blank"
                     rel="noreferrer"
                     aria-label="X profile"

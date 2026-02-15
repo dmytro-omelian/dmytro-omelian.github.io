@@ -18,7 +18,7 @@ function Contact() {
                 </li>
                 <li>
                     <span className="contact-icon contact-icon-x" aria-hidden="true">X</span>
-                    <a href="https://x.com/dmytroomelian" target="_blank" rel="noreferrer">@dmytroomelian</a>
+                    <a href="https://twitter.com/intent/user?screen_name=dmytroomelian" target="_blank" rel="noreferrer">@dmytroomelian</a>
                 </li>
             </ul>
         </div>

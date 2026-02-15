@@ -9,7 +9,7 @@ const newsItems = [
     { date: "Oct 2025", description: "After 1 year and 9 months, I am no longer working at ", links: [{ text: "Ideas Center UCU", url: "https://ideascenter.ucu.edu.ua/" }], suffix: " (former Center for Entrepreneurship)" },
     { date: "Aug 2025", description: "Built ", links: [{ text: "ideascenter.ucu.edu.ua", url: "https://ideascenter.ucu.edu.ua/" }], suffix: " as a freelance project" },
     { date: "Aug 2025", description: "Started working on ", links: [{ text: "ai-calendar.com", url: "https://ai-calendar.com" }], suffix: ", got 100 users and $60 in revenue, but quit due to numerous reasons (main ones are deprioritization and not full commitment)" },
-    { date: "July 2025", description: "Started posting on X", link: { text: "@dmytroomelian", url: "https://x.com/dmytroomelian" } },
+    { date: "July 2025", description: "Started posting on X", link: { text: "@dmytroomelian", url: "https://twitter.com/intent/user?screen_name=dmytroomelian" } },
     { date: "Feb 2025", description: "1 year at ", links: [{ text: "Center of Entrepreneurship", url: "https://ideascenter.ucu.edu.ua/" }] },
     { date: "Nov 2024", description: "1 year at ", links: [{ text: "AiSDR", url: "https://aisdr.com" }] },
     { date: "Nov 2024", description: "Had 2 batches involved part-time and now going to help and mentor students, lecturing about problem analysis, customer development, and pitching. Involvement includes helping build IdeasLab" },
