@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import './Posts.css';
-import { getAllPostViews, incrementPostView } from './postViews';
 
 const posts = [
     {
@@ -126,22 +125,6 @@ const posts = [
 ];
 
 function Posts() {
-    const [viewsBySlug, setViewsBySlug] = useState({});
-
-    useEffect(() => {
-        let isMounted = true;
-
-        getAllPostViews(true).then((views) => {
-            if (isMounted) {
-                setViewsBySlug(views);
-            }
-        });
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
     return (
         <div className='posts-container'>
             <h1>Blog</h1>
@@ -157,10 +140,7 @@ function Posts() {
                             className="post-item"
                         >
                             <h3>{post.title}</h3>
-                            <div className="post-meta-row">
-                                <p className="post-date">{post.date}</p>
-                                <p className="post-views">{viewsBySlug[post.slug] || 0} views</p>
-                            </div>
+                            <p className="post-date">{post.date}</p>
                             <p className="post-preview">{post.preview}</p>
                         </Link>
                     ))}
@@ -182,27 +162,6 @@ export function PostDetail() {
     const { slug } = useParams();
 
     const item = posts.find(entry => entry.slug === slug);
-    const itemSlug = item?.slug;
-    const [views, setViews] = useState(0);
-
-    useEffect(() => {
-        if (!itemSlug) {
-            setViews(0);
-            return;
-        }
-
-        let isMounted = true;
-
-        incrementPostView(itemSlug).then((nextViews) => {
-            if (isMounted) {
-                setViews(nextViews);
-            }
-        });
-
-        return () => {
-            isMounted = false;
-        };
-    }, [itemSlug]);
 
     if (!item) {
         return (
@@ -218,7 +177,7 @@ export function PostDetail() {
             <div className="selected-item">
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <h2>{item.title}</h2>
-                <p className="post-date post-date-selected">{item.date} · {views} views</p>
+                <p className="post-date post-date-selected">{item.date}</p>
                 {item.content.map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
                 ))}
