@@ -1,8 +1,83 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import './Posts.css';
+import { getAllPostViews, incrementPostView } from './postViews';
 
 const posts = [
+    {
+        id: 3,
+        slug: "about-nvidia-way",
+        title: "About Nvidia Way",
+        date: "January 13, 2026",
+        preview: "The Nvidia Way felt less like a success story and more like a field guide to pressure, clarity, and obsession with detail.",
+        content: [
+            "People joke that \"NVIDIA works 25/8.\" After reading The Nvidia Way, that line stops being a meme and becomes a culture description. This is a company where urgency is essential and \"hard-working\" defines the core approach. And the book makes one thing painfully clear: this culture is powerful and definitely not for everyone.",
+            "What I liked about the book is that it does not try to be just a success story. It reads more like a field guide to a specific kind of excellence: the kind that comes from pressure, clarity, and obsession with details. Tae Kim's framing is basically: yes, NVIDIA is a tech giant now, but it was also a company that almost died more than once, and all of that shaped how it works today.",
+            "My biggest takeaway: NVIDIA's hardcore reputation is not just about hours, it is about how they think. The book consistently led me into one thing that I am now thinking about how to implement in my life: understand things in detail. The kind of detailed understanding where, if someone asks why three times, you are still standing. This is also why I suddenly started thinking maybe I do need a whiteboard in my life.",
+            "Whiteboard at NVIDIA is a weapon. Jensen (and the whole company) uses it to force real-time reasoning: if you cannot explain it live, you do not understand it yet. Whiteboard makes your thinking public and therefore improvable.",
+            "Another practice I loved (and think about stealing) is the top-5-things email habit: people send Jensen their top priorities and thoughts, and he uses it as a sensory system for the whole company. The line that stuck with me is that he wants to detect the weak signals, not the obvious trends everyone sees, but the early whispers at the edges. Imagine the newsletter format from the whole company with greatest insights. Sounds cool to me.",
+            "This system is demanding because it starts at the CEO. Jensen's style is intense, direct, detail-heavy, and built for speed. NVIDIA is described as a hardcore culture with high accountability, and Jensen stays extremely close to decisions, reportedly with a very large number of direct reports.",
+            "At the same time, the story is not simply work more. There is a weird contradiction I respect: high expectations plus a kind of humanity. NVIDIA's own reporting shows overall turnover around 5.3% (FY23) versus a semiconductor industry average of 19.2%, which is not what you would expect from a place with a hardcore reputation. So something is working: mission, compensation, talent density, and the feeling that you are building the future (not just shipping tickets).",
+            "The personal-life tradeoff is where I have mixed feelings. Reading about Jensen's always-on mode did not shock me; it made me recognize a pattern. The book mostly avoids personal life commentary, but when small paragraphs appear, like answering emails during moments other people would treat as off-limits, it paints a clear picture: the intensity is not seasonal, it is identity-level. Always.",
+            "And then there is the thought that kept returning, and it is the one I cannot unsee: there is no second Jensen inside NVIDIA. The book raises the uncomfortable question of what happens to a culture that is so tightly coupled to one person. Maybe they have plan B or C. Maybe the system can evolve. But it is still fascinating (and a little scary) to see a company run like an extension of one founder's mind.",
+            "So my conclusion is simple: The Nvidia Way is inspiring, but not in a copy-paste this culture way. It is more like: here is what it looks like when a company decides to be exceptional on purpose, every day, for decades. Take what you like: the whiteboard thinking, the weak-signal detection, the obsession with details, the bias for action. And if you are curious whether you would thrive in a 25/8 environment, this book is basically an invitation to find out."
+        ]
+    },
+    {
+        id: 4,
+        slug: "do-it-monthly-well-or-just-from-time-to-time",
+        title: "do it monthly! (well, or just from time to time)",
+        date: "February 4, 2026",
+        preview: "Start of the month feels like the best time to review and reflect, and monthly updates turned from an experiment into a habit.",
+        content: [
+            "start of the month feels like the best time to review and reflect (as we know).",
+            "for the last 13 months, i've been writing something called \"monthly updates.\"",
+            "it started as a \"let's give it a try\" and built up into habit.",
+            "historically, i think it came from work.",
+            "at aisdr we have monthly updates (the ones we send to our investors).",
+            "they are not the \"look how busy we are\" kind.",
+            "more like what happened, what changed, what we learned, what we do next.",
+            "pretty simple ones but well-written.",
+            "(frankly speaking, waiting for them at the end of each month is like anticipating a new journal edition 😅)",
+            "i used to love yearly planning (even if i only executed half of it).",
+            "but seeing this monthly loop was a totally new thing for me.",
+            "it forces you to move and iterate faster.",
+            "since i started doing monthly updates myself, i'm not a big fan of yearly planning anymore.",
+            "i still do a yearly review, just to look back at what actually happened.",
+            "but planning a whole year ahead feels too imaginary.",
+            "monthly is real enough.",
+            "my routine is simple.",
+            "i sit down at the end of the month and i review a few sources of truth:",
+            "my notes\nmy calendar\nsome analytics (work, product, writing, whatever matters this month).",
+            "i'm trying to rebuild the month from scratch.",
+            "then i try to answer a few questions:",
+            "what was good\nwhat was bad\nwhat should change next month\nwhat i said no to (and maybe should revisit), etc.",
+            "the output is usually one short document.",
+            "sometimes messy.",
+            "sometimes surprisingly clear.",
+            "what i still lack is some kind of urgency. or maybe ambition.",
+            "sometimes people can look at my monthly goals and say:",
+            "(okey, maybe not people, but that's what i could say to me)",
+            "\"why can't you do this in a week\"",
+            "and honestly i don't always have a good explanation.",
+            "anything i say starts to sound like excuses.",
+            "maybe it is just being realistic about capacity, or maybe i'm moving too slow.",
+            "i'm still figuring it out.",
+            "but i'd rather have a realistic loop that runs every month than a bold plan i forget in a week.",
+            "after i write the update, i send it to a few people.",
+            "i have 7 people in my list. my (so-called) accountability partners (or whatever they call it, just some nice people).",
+            "they don't need to reply. they don't even need to read. they can just archive it.",
+            "that's actually how i start most of my updates: \"thanks for reading or archiving.\"",
+            "the purpose is not \"if people read.\" the purpose is for me to press send.",
+            "it turns reflection into something more concrete, like a small commitment.",
+            "i think this habit can be applied anytime.",
+            "you don't need substack. you don't need linkedin. you don't need a big template.",
+            "it can be as simple as emailing yourself 5 bullet points:",
+            "one thing i'm proud of\none thing i regret\none thing i learned\none thing i should stop\none focus for next month.",
+            "the point is to make it consistent. just try it. you can simply start writing only to yourself.",
+            "additionally, i have a gpt project and the knowledge base is essays, memos, and my monthly update. i call it coach and talk to it from time to time :)."
+        ]
+    },
     {
         id: 1,
         slug: "trying-to-experiment-with-different-concepts-of-writing",
@@ -51,6 +126,22 @@ const posts = [
 ];
 
 function Posts() {
+    const [viewsBySlug, setViewsBySlug] = useState({});
+
+    useEffect(() => {
+        let isMounted = true;
+
+        getAllPostViews(true).then((views) => {
+            if (isMounted) {
+                setViewsBySlug(views);
+            }
+        });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     return (
         <div className='posts-container'>
             <h1>Blog</h1>
@@ -58,7 +149,7 @@ function Posts() {
             <div className="items-list">
                 {posts
                     .slice()
-                    .reverse()
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .map(post => (
                         <Link
                             key={post.id}
@@ -66,7 +157,10 @@ function Posts() {
                             className="post-item"
                         >
                             <h3>{post.title}</h3>
-                            <p className="post-date">{post.date}</p>
+                            <div className="post-meta-row">
+                                <p className="post-date">{post.date}</p>
+                                <p className="post-views">{viewsBySlug[post.slug] || 0} views</p>
+                            </div>
                             <p className="post-preview">{post.preview}</p>
                         </Link>
                     ))}
@@ -88,6 +182,27 @@ export function PostDetail() {
     const { slug } = useParams();
 
     const item = posts.find(entry => entry.slug === slug);
+    const itemSlug = item?.slug;
+    const [views, setViews] = useState(0);
+
+    useEffect(() => {
+        if (!itemSlug) {
+            setViews(0);
+            return;
+        }
+
+        let isMounted = true;
+
+        incrementPostView(itemSlug).then((nextViews) => {
+            if (isMounted) {
+                setViews(nextViews);
+            }
+        });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [itemSlug]);
 
     if (!item) {
         return (
@@ -103,6 +218,7 @@ export function PostDetail() {
             <div className="selected-item">
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <h2>{item.title}</h2>
+                <p className="post-date post-date-selected">{item.date} · {views} views</p>
                 {item.content.map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
                 ))}
