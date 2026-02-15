@@ -15,6 +15,25 @@
       href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap"
       rel="stylesheet"
     />
+    <script type="text/javascript">
+      (function restoreSpaPath(location) {
+        if (location.search[1] !== 'p' || location.search[2] !== '=') {
+          return;
+        }
+
+        var urlParams = new URLSearchParams(location.search);
+        var path = urlParams.get('p');
+
+        if (!path) {
+          return;
+        }
+
+        var query = urlParams.get('q');
+        var search = query ? '?' + query.replace(/~and~/g, '&') : '';
+
+        window.history.replaceState(null, '', path + search + location.hash);
+      })(window.location);
+    </script>
     <title>Dmytro Omelian</title>
   </head>
   <body>

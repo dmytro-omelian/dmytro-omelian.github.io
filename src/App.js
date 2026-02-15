@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import About from './components/about/About';
 import Experience from './components/experience/Experience';
@@ -12,16 +12,6 @@ import Contact from './components/contact/Contact';
 
 
 function App() {
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const path = urlParams.get('p');
-    if (path) {
-      const query = urlParams.get('q');
-      const search = query ? '?' + query.replace(/~and~/g, '&') : '';
-      window.history.replaceState(null, '', path + search + window.location.hash);
-    }
-  }, []);
-
   return (
     <Router>
       <div className='app-container'>
