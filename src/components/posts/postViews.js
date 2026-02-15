@@ -1,7 +1,8 @@
-const VIEWS_ENDPOINT = '/api/views';
-const SESSION_VIEW_PREFIX = 'blog_post_viewed_v2_';
+import seedViews from '../../data/postViewsSeed.json';
 
-let cachedViews = null;
+const DEFAULT_VIEWS_ENDPOINT = '/api/views';
+const VIEWS_ENDPOINT = (process.env.REACT_APP_VIEWS_ENDPOINT || DEFAULT_VIEWS_ENDPOINT).trim();
+const SESSION_VIEW_PREFIX = 'blog_post_viewed_v2_';
 
 function normalizeViews(input) {
   if (!input || typeof input !== 'object') {
@@ -13,6 +14,18 @@ function normalizeViews(input) {
     accumulator[slug] = Number.isFinite(numericValue) && numericValue >= 0 ? Math.floor(numericValue) : 0;
     return accumulator;
   }, {});
+}
+
+const STATIC_FALLBACK_VIEWS = normalizeViews(seedViews);
+const HAS_VIEWS_ENDPOINT = Boolean(VIEWS_ENDPOINT);
+
+let cachedViews = { ...STATIC_FALLBACK_VIEWS };
+
+function withFallbackViews(input) {
+  return {
+    ...STATIC_FALLBACK_VIEWS,
+    ...normalizeViews(input),
+  };
 }
 
 async function requestJson(url, options = {}) {
@@ -66,13 +79,17 @@ export async function getAllPostViews(forceRefresh = false) {
     return cachedViews;
   }
 
+  if (!HAS_VIEWS_ENDPOINT) {
+    return cachedViews;
+  }
+
   try {
     const payload = await requestJson(VIEWS_ENDPOINT);
-    const views = normalizeViews(payload.views || payload);
+    const views = withFallbackViews(payload.views || payload);
     cachedViews = views;
     return views;
   } catch (error) {
-    return cachedViews || {};
+    return cachedViews;
   }
 }
 
@@ -96,6 +113,10 @@ export async function incrementPostView(slug) {
 
   // Mark early to avoid duplicate increments from React StrictMode double effects in dev.
   markAsCountedInSession(slug);
+
+  if (!HAS_VIEWS_ENDPOINT) {
+    return getPostViewsForSlug(slug);
+  }
 
   try {
     const payload = await requestJson(`${VIEWS_ENDPOINT}/${encodeURIComponent(slug)}`, {
