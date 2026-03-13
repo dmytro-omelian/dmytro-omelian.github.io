@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './News.css';
 
 const newsItems = [
+    { date: "Jan 2026", description: "Moved to Warsaw, Poland" },
+    { date: "Jan 2026", description: "Started working on x-ai-agent pet-project and doing some social engineering there :)" },
     { date: "Oct 2025", description: "1 year of daily writing on LinkedIn with 400,000 impressions and 3,100 followers" },
     { date: "Nov 2025", description: "Guest lecturer (3 lectures) at Venture Camp Ukraine from ", links: [{ text: "Ideas Center UCU", url: "https://ideascenter.ucu.edu.ua/" }] },
     { date: "Nov 2025", description: "2 years at ", links: [{ text: "AiSDR", url: "https://aisdr.com" }] },
@@ -37,25 +39,58 @@ const newsItems = [
     { date: "Apr 2021", description: "Decided not to finish EPAM Java Course, quit" },
 ];
 
-const sortedNewsItems = newsItems.sort((a, b) => {
-    const monthMap = {
-        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
-        'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-    };
+const monthMap = {
+    Jan: 0,
+    January: 0,
+    Feb: 1,
+    February: 1,
+    Mar: 2,
+    March: 2,
+    Apr: 3,
+    April: 3,
+    May: 4,
+    Jun: 5,
+    June: 5,
+    Jul: 6,
+    July: 6,
+    Aug: 7,
+    August: 7,
+    Sep: 8,
+    September: 8,
+    Oct: 9,
+    October: 9,
+    Nov: 10,
+    November: 10,
+    Dec: 11,
+    December: 11
+};
 
-    const parseDate = (dateStr) => {
-        const [month, year] = dateStr.split(' ');
-        return new Date(`${year}-${monthMap[month]}-01`);
-    };
+const parseDate = (dateStr) => {
+    const [month, year] = dateStr.split(' ');
+    const monthIndex = monthMap[month];
 
-    return parseDate(b.date) - parseDate(a.date); // Sort newest first
+    if (monthIndex === undefined) {
+        return new Date(0);
+    }
+
+    return new Date(Number(year), monthIndex, 1);
+};
+
+const sortedNewsItems = [...newsItems].sort((a, b) => {
+    return parseDate(b.date) - parseDate(a.date);
 });
 
+const ITEMS_PER_PAGE = 10;
+
 const News = () => {
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+    const visibleItems = sortedNewsItems.slice(0, visibleCount);
+    const hasMoreItems = visibleCount < sortedNewsItems.length;
+
     return (
         <div className="news-container">
             <h2>News</h2>
-            {sortedNewsItems.map((item, index) => (
+            {visibleItems.map((item, index) => (
                 <div className="news-item" key={index}>
                     <div className="news-date">{item.date}</div>
                     <div className="news-description">
@@ -73,6 +108,15 @@ const News = () => {
                     </div>
                 </div>
             ))}
+            {hasMoreItems && (
+                <button
+                    className="news-show-more"
+                    type="button"
+                    onClick={() => setVisibleCount((currentCount) => currentCount + ITEMS_PER_PAGE)}
+                >
+                    Show more
+                </button>
+            )}
         </div>
     );
 };

@@ -4,6 +4,42 @@ import './Posts.css';
 
 const posts = [
     {
+        id: 5,
+        slug: "now-i-see-how-it-is-coming",
+        title: "Now I See How It Is Coming",
+        author: "Dmytro Omelian",
+        date: "March 9, 2026",
+        preview: "You're paying $9.99 a month for an app that does three things you care about and forty-seven you don't.",
+        content: [
+            "You're paying $9.99 a month for an app that does three things you care about and forty-seven you don't.",
+            "I know this because I've been you. For six years, I cycled through lots of productivity tools I could find. Notion, Todoist, TickTick, things I can't even remember the names of anymore. Each time, the pattern was the same: excitement, setup, migration of my entire database from the old tool, a few good weeks, then a slow fade. Not because the app broke. Because something felt off. Something slightly didn't fit. And then I'd spot a new one, think \"maybe this one works,\" and start all over again.",
+            "Thanks for reading experimenting is cool, i think! Subscribe for free to receive new posts and support my work.",
+            "Tiago Forte calls this \"tool churn\" - the endless cycle of switching productivity systems, not because they fail, but because the novelty wears off. Research from Wendy Wood's habit lab at Duke backs this up: the tool you use matters far less than the environment you build around it. At some point, I realized the same thing. It wasn't about the app. It was about mindset. The kind of mindset that lets you get things done even with a bullet-point list in Apple Notes.",
+            "But here's what shifted my thinking further: what if you didn't have to choose someone else's app at all?",
+            "What if you just built your own?",
+            "I'm not talking about building the next Spotify or replicating your telecom provider's app. Those live in a different category entirely - massive infrastructure, licensed content, millions of users. I'm talking about the smaller stuff. Habit trackers. Calorie counters. Personal dashboards. Journaling apps. The kind of tools where someone's product team made a hundred decisions about how you should organize your life - and got most of them slightly wrong.",
+            "Robin Sloan wrote a beautiful essay in 2020 called \"An App Can Be a Home-Cooked Meal.\" He built a tiny messaging app just for his family - no scale, no users, no App Store listing - and argued that not all software needs to be a product [1]. After reading it, I keep thinking about building one tool that sends the same message to all my family members. Since I don't have socials and everyone in my family uses different messaging apps, I'd find it useful to type a single message and have it distributed to all the right channels. Maggie Appleton later expanded on this idea, calling them \"home-cooked apps.\" Software should be personal, not mass-produced.",
+            "A year ago, that sounded idealistic. Now it's just... possible.",
+            { type: "heading", text: "My $10 habit tracker" },
+            "I don't have much iOS experience. A university course two years ago, and one vibe-coded habit tracking app. That's it. The app is not rocket science. It's simple. But it has exactly the set of features I want, arranged exactly the way I want them. Nothing crazy. And I've been using it for months.",
+            "Here's what surprised me: I feel connected to it. Even though I built it in a few hours with AI doing most of the heavy lifting, there's an attachment there that I never felt toward any app I downloaded. It's the same reason home-cooked food feels different from a restaurant meal - effort, ownership, and the absence of someone else's vision imposed on you.",
+            "My habit tracker isn't better than Todoist or TickTick in general. It's better for me. And that's the whole point. Personal software fits you in a way no product team would ever prioritize, because you're a market of one. And with TestFlight, your app doesn't have to stay personal - you can share it with close friends, family, or your whole class without ever publishing to the App Store [2].",
+            { type: "caption", text: "My app vibe-coded with Superapp :)" },
+            { type: "heading", text: "The math that kills subscriptions" },
+            "Here's the thing: people overcomplicate. Building your own app is just cheaper. Say you use three personal-utility apps - a habit tracker, a calorie counter, and some kind of daily planner. At $5-10 each per month, that's $180-360 a year. Every year. And you're still stuck with someone else's design choices.",
+            "An Apple Developer account costs $99 a year. Build all three apps yourself, and that's $33 per app - a one-time equivalent of three months of a single subscription. But unlike a subscription, the app doesn't expire. It's yours forever. You can update it whenever you want. And you can share it with up to 100 people via TestFlight for free - your family, your friends, your team. No one else pays a cent.",
+            "The more apps you build, the more absurd the subscription model looks. Five apps? That's $20 each. Ten? $10. Meanwhile, the subscription crowd is still paying $60-100 a month for tools they half-use. The economics aren't even close.",
+            { type: "heading", text: "Not everyone can do this yet" },
+            "I won't pretend there's no barrier. Right now, you still need the courage to download Xcode. You probably need to not be scared of something like Supabase for a backend. There's a gap between \"anyone can prompt an AI\" and \"anyone can ship an app to their phone.\"",
+            "But that gap is shrinking fast. Tools like Replit, Bolt, and Lovable are pushing toward a world where you don't need Xcode at all.",
+            "The strongest argument for building your own tools isn't that it's cheaper, though it is. It's that personal software fits you in a way that nothing off the shelf ever will.",
+            "If you disagree or want to share your own perspective, I'd love to hear it. Happy to discuss.",
+            { type: "heading", text: "References" },
+            "[1] Robin Sloan - \"An App Can Be a Home-Cooked Meal\" - Sloan built a messaging app for his family and argued that not all software needs to scale.",
+            "[2] Apple's TestFlight allows you to distribute apps to up to 100 people without publishing to the App Store."
+        ]
+    },
+    {
         id: 3,
         slug: "about-nvidia-way",
         title: "About Nvidia Way",
@@ -124,6 +160,36 @@ const posts = [
     }
 ];
 
+const DEFAULT_AUTHOR = 'Dmytro Omelian';
+
+function getPostAuthor(post) {
+    return post.author || DEFAULT_AUTHOR;
+}
+
+function renderContentBlock(block, index) {
+    if (typeof block === 'string') {
+        return <p key={index}>{block}</p>;
+    }
+
+    if (block?.type === 'heading') {
+        return (
+            <h3 key={index} className="post-section-heading">
+                {block.text}
+            </h3>
+        );
+    }
+
+    if (block?.type === 'caption') {
+        return (
+            <p key={index} className="post-caption">
+                {block.text}
+            </p>
+        );
+    }
+
+    return null;
+}
+
 function Posts() {
     return (
         <div className='posts-container'>
@@ -177,10 +243,9 @@ export function PostDetail() {
             <div className="selected-item">
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <h2>{item.title}</h2>
+                <p className="post-author">{getPostAuthor(item)}</p>
                 <p className="post-date post-date-selected">{item.date}</p>
-                {item.content.map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                ))}
+                {item.content.map(renderContentBlock)}
                 <div className="newsletter-section">
                     <iframe
                         src="https://domelian.substack.com/embed"

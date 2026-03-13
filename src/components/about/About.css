@@ -1,21 +1,36 @@
 .about-me-container {
   flex: 1;
   width: 100%;
-  max-width: 800px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
+.about-top-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.about-profile-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .me-image {
-  width: 200px;
+  width: 100%;
+  max-width: 220px;
   height: auto;
 }
 
 .about-socials {
-  margin-top: 10px;
-  margin-bottom: 24px;
+  margin-top: 14px;
+  margin-bottom: 0;
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
 
 .about-socials a {
@@ -65,4 +80,28 @@
 
 .newsletter-section iframe:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .about-top-row {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .about-profile-column {
+    align-items: flex-start;
+  }
+
+  .about-socials {
+    justify-content: flex-start;
+  }
+
+  .newsletter-section {
+    padding: 24px 20px;
+  }
+
+  .newsletter-section iframe {
+    width: 100%;
+    max-width: 480px;
+  }
 }
