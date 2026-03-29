@@ -175,10 +175,7 @@ function OpenQuestionsSection() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="questions-modal-header">
-              <div>
-                <p className="questions-eyebrow">Question log</p>
-                <h3 id="question-log-title">{selectedQuestion.title}</h3>
-              </div>
+              <h3 id="question-log-title">{selectedQuestion.title}</h3>
               <button
                 className="questions-close-button"
                 type="button"
