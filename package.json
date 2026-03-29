@@ -1,7 +1,6 @@
 {
   "name": "test-react",
   "version": "0.1.0",
-  "homepage": "https://dichik.github.io",
   "proxy": "http://127.0.0.1:4001",
   "private": true,
   "dependencies": {

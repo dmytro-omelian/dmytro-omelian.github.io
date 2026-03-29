@@ -5,7 +5,7 @@ const path = require('path');
 const { Pool } = require('pg');
 const seedViews = require('../src/data/postViewsSeed.json');
 
-const SCHEMA_FILE_PATH = path.resolve(__dirname, './schema.sql');
+const SCHEMA_FILE_PATH = path.join(process.cwd(), 'server', 'schema.sql');
 
 let pool = null;
 let initializationPromise = null;
