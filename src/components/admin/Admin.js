@@ -109,10 +109,6 @@ function Admin() {
     loggedAt: getTodayDate(),
     noteMarkdown: '',
   });
-  const [imageDraft, setImageDraft] = useState({
-    altText: '',
-    imageUrl: '',
-  });
   const [editingLogId, setEditingLogId] = useState(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
@@ -135,45 +131,7 @@ function Admin() {
       loggedAt: getTodayDate(),
       noteMarkdown: '',
     });
-    setImageDraft({
-      altText: '',
-      imageUrl: '',
-    });
     setEditingLogId(null);
-  }
-
-  function handleImageDraftChange(fieldName, value) {
-    setImageDraft((currentImageDraft) => ({
-      ...currentImageDraft,
-      [fieldName]: value,
-    }));
-  }
-
-  function handleInsertImage() {
-    const imageUrl = imageDraft.imageUrl.trim();
-    const altText = imageDraft.altText.trim() || 'Log image';
-
-    if (!imageUrl) {
-      setWorkspaceError('Enter an image URL before inserting it.');
-      return;
-    }
-
-    const imageMarkdown = `![${altText}](${imageUrl})`;
-
-    setNoteDraft((currentLog) => {
-      const currentMarkdown = currentLog.noteMarkdown.trimEnd();
-
-      return {
-        ...currentLog,
-        noteMarkdown: currentMarkdown ? `${currentMarkdown}\n\n${imageMarkdown}` : imageMarkdown,
-      };
-    });
-    setImageDraft({
-      altText: '',
-      imageUrl: '',
-    });
-    setWorkspaceError('');
-    setStatusMessage('Image added to the draft.');
   }
 
   async function loadQuestions(keyword = adminKeyword, preferredQuestionId = selectedQuestionId) {
