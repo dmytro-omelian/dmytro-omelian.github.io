@@ -418,6 +418,20 @@
   line-height: 1.65;
 }
 
+.admin-preview-note ul,
+.admin-preview-note ol {
+  padding-left: 22px;
+  list-style-position: outside;
+}
+
+.admin-preview-note li + li {
+  margin-top: 6px;
+}
+
+.admin-preview-note ol > li::marker {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 .admin-preview > *:first-child {
   margin-top: 0;
 }

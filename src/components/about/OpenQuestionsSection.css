@@ -231,10 +231,15 @@
 .questions-log-content ul,
 .questions-log-content ol {
   padding-left: 22px;
+  list-style-position: outside;
 }
 
 .questions-log-content li+li {
   margin-top: 6px;
+}
+
+.questions-log-content ol > li::marker {
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .questions-log-content blockquote {

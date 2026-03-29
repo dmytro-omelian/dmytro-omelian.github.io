@@ -106,13 +106,13 @@ function OpenQuestionsSection() {
       <section className="questions-panel">
         <div className="questions-panel-header">
           <div className="questions-heading-block">
-            <div className="questions-heading-nav" role="tablist" aria-label="Question collections">
+            <div className="questions-heading-nav" role="tablist" aria-label="Project collections">
               <button
                 className={`questions-heading-link${showArchived ? '' : ' is-active'}`}
                 type="button"
                 onClick={() => setShowArchived(false)}
               >
-                Open questions
+                Active projects
               </button>
               <span className="questions-heading-separator" aria-hidden="true">|</span>
               <button
@@ -144,7 +144,7 @@ function OpenQuestionsSection() {
 
         {!questionsError && currentQuestions.length === 0 && (
           <p className="questions-empty">
-            {showArchived ? 'Nothing archived yet.' : 'No public questions yet.'}
+            {showArchived ? 'Nothing archived yet.' : 'No active projects yet.'}
           </p>
         )}
 
@@ -189,7 +189,7 @@ function OpenQuestionsSection() {
             {logsError && <p className="questions-error">{logsError}</p>}
 
             {!isLogsLoading && !logsError && questionLogs.length === 0 && (
-              <p className="questions-empty">No logs yet for this question.</p>
+              <p className="questions-empty">No logs yet for this project.</p>
             )}
 
             <div className="questions-log-list">
