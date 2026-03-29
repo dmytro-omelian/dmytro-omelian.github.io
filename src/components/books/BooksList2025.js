@@ -1,5 +1,4 @@
-import React from 'react';
-import './BooksList.css';
+import BooksYearSection from './BooksYearSection';
 
 const books = [
     { year: 2025, title: 'Heart-Led Leadership (eng)', author: 'Tommy Spaulding' },
@@ -50,110 +49,7 @@ const books = [
 ];
 
 function BooksList2025() {
-    const [selectedBook, setSelectedBook] = React.useState(null);
-
-    const handleOpenSummary = (book) => {
-        if (!book.summary) return;
-        setSelectedBook(book);
-
-        if (typeof window !== 'undefined' && book.slug) {
-            const newHash = `#book-${book.slug}`;
-            if (window.location.hash !== newHash) {
-                window.history.replaceState(null, '', newHash);
-            }
-        }
-    };
-
-    const handleCloseSummary = () => {
-        setSelectedBook(null);
-
-        if (typeof window !== 'undefined') {
-            const { pathname, search, hash } = window.location;
-            if (hash && hash.startsWith('#book-')) {
-                window.history.replaceState(null, '', pathname + search);
-            }
-        }
-    };
-
-    React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-
-        const { hash } = window.location;
-        if (!hash || !hash.startsWith('#book-')) return;
-
-        const slug = hash.replace('#book-', '');
-        if (!slug) return;
-
-        const bookWithSummary = books.find(
-            (book) => book.slug === slug && !!book.summary
-        );
-
-        if (bookWithSummary) {
-            setSelectedBook(bookWithSummary);
-        }
-    }, []);
-
-    return (
-        <div>
-            <div className="books-by-year">
-                <h3>2025</h3>
-                <ul>
-                    {books
-                        .slice()
-                        .reverse()
-                        .map((book, index) => (
-                            <li key={index}>
-                                <span
-                                    className={
-                                        book.summary
-                                            ? 'book-title has-summary'
-                                            : 'book-title'
-                                    }
-                                    onClick={() => handleOpenSummary(book)}
-                                >
-                                    {book.title}
-                                </span>{' '}
-                                by {book.author}
-                            </li>
-                        ))}
-                </ul>
-            </div>
-
-            {selectedBook && (
-                <div className="book-summary-overlay" onClick={handleCloseSummary}>
-                    <div
-                        className="book-summary-sidebar"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            className="book-summary-close"
-                            onClick={handleCloseSummary}
-                        >
-                            ×
-                        </button>
-                        <h4 className="book-summary-title">{selectedBook.title}</h4>
-                        <p className="book-summary-author">by {selectedBook.author}</p>
-                        <div className="book-summary-text">
-                            {selectedBook.summary
-                                .replace(/\\n/g, '\n')
-                                .split('\n')
-                                .map((line, index) =>
-                                    line.trim() === '' ? (
-                                        <div
-                                            key={`space-${index}`}
-                                            className="book-summary-space"
-                                        />
-                                    ) : (
-                                        <p key={index}>{line}</p>
-                                    )
-                                )}
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+    return <BooksYearSection year="2025" books={books} />;
 }
 
 export default BooksList2025;

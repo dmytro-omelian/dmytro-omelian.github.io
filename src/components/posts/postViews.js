@@ -1,7 +1,11 @@
 import seedViews from '../../data/postViewsSeed.json';
+import { buildApiUrl, requestJson } from '../../api/siteData';
 
 const DEFAULT_VIEWS_ENDPOINT = '/api/views';
-const VIEWS_ENDPOINT = (process.env.REACT_APP_VIEWS_ENDPOINT || DEFAULT_VIEWS_ENDPOINT).trim();
+const CONFIGURED_VIEWS_ENDPOINT = (process.env.REACT_APP_VIEWS_ENDPOINT || '').trim();
+const VIEWS_ENDPOINT = CONFIGURED_VIEWS_ENDPOINT
+  ? buildApiUrl(CONFIGURED_VIEWS_ENDPOINT)
+  : buildApiUrl(DEFAULT_VIEWS_ENDPOINT);
 const SESSION_VIEW_PREFIX = 'blog_post_viewed_v2_';
 const LOCAL_VIEWS_STORAGE_KEY = 'blog_post_views_v1';
 
@@ -95,16 +99,6 @@ function withFallbackViews(input) {
     ...STATIC_FALLBACK_VIEWS,
     ...normalizeViews(input),
   };
-}
-
-async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
-
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
-
-  return response.json();
 }
 
 function isAlreadyCountedInSession(slug) {

@@ -1,6 +1,6 @@
 import './Achievements.css';
 
-const newsItems = [
+const achievementItems = [
     { date: "Sep 2023", description: "Winners - AI HOUSE Camp 2023 (team: Hearify)." },
     { date: "May 2023", description: "3-rd place @ SoftServe & LNU Study Smart Hackathon 2023" },
     { date: "2021", description: "1/2 Final of The 2021 ICPC Southeastern Europe Regional Contest." },
@@ -11,12 +11,12 @@ const newsItems = [
 
 const Achievements = () => {
     return (
-        <div className="news-container">
-            <h2>Some small achievements</h2>
-            {newsItems.map((item, index) => (
-                <div className="news-item" key={index}>
-                    <div className="news-date">{item.date}</div>
-                    <div className="news-description">{item.description}</div>
+        <div className="achievements-container">
+            <h2 className="achievements-title">Some small achievements</h2>
+            {achievementItems.map((item, index) => (
+                <div className="achievements-item" key={index}>
+                    <div className="achievements-date">{item.date}</div>
+                    <div className="achievements-description">{item.description}</div>
                 </div>
             ))}
         </div>

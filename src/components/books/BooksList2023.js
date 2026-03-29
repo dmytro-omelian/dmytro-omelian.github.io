@@ -1,5 +1,4 @@
-import React from 'react';
-import './BooksList.css';
+import BooksYearSection from './BooksYearSection';
 
 const books = [
     { year: 2023, title: 'Напролом', author: 'Раян Голідей' },
@@ -21,21 +20,7 @@ const books = [
 ];
 
 function BooksList2023() {
-    return (
-        <div>
-            <div className="books-by-year">
-                <h3>2023</h3>
-                <ul>
-                    {books.slice().reverse().map((book, index) => (
-                        <li key={index}>
-                            <span className="book-title">{book.title}</span> by {book.author}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            {/* You can add more years and books as needed */}
-        </div>
-    );
+    return <BooksYearSection year="2023" books={books} />;
 }
 
 export default BooksList2023;

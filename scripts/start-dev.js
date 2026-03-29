@@ -1,15 +1,18 @@
 const { spawn } = require('child_process');
 const path = require('path');
+require('../server/loadEnv');
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const viewsServerPath = path.resolve(__dirname, '../server/views-server.js');
 
 const viewsServer = spawn(process.execPath, [viewsServerPath], {
   stdio: 'inherit',
+  env: process.env,
 });
 
 const webApp = spawn(npmCommand, ['run', 'start:react'], {
   stdio: 'inherit',
+  env: process.env,
 });
 
 function terminateChild(childProcess, signal = 'SIGTERM') {

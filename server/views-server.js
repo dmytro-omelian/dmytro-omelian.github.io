@@ -1,157 +1,49 @@
+require('./loadEnv');
+
 const http = require('http');
-const fs = require('fs/promises');
-const path = require('path');
-const { execFile } = require('child_process');
-const { promisify } = require('util');
+const {
+  closePool,
+  createHttpError,
+  createQuestion,
+  createQuestionLog,
+  deleteQuestionLog,
+  ensureDatabase,
+  getAdminQuestions,
+  getAllPostViews,
+  getQuestionById,
+  getQuestionLogs,
+  getQuestions,
+  incrementPostView,
+  updateQuestion,
+  updateQuestionLog,
+} = require('./db');
 
-const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.VIEWS_PORT) || 4001;
-const DB_FILE_PATH = path.resolve(__dirname, process.env.VIEWS_DB_PATH || '../data/postViews.sqlite');
-const LEGACY_DATA_FILE_PATH = path.resolve(__dirname, '../data/postViews.json');
-const SEED_FILE_PATH = path.resolve(__dirname, '../src/data/postViewsSeed.json');
+const ADMIN_API_KEY = (process.env.ADMIN_API_KEY || '').trim();
 
-let initializationPromise = null;
 let writeQueue = Promise.resolve();
-
-function normalizeViews(input) {
-  if (!input || typeof input !== 'object') {
-    return {};
-  }
-
-  return Object.entries(input).reduce((accumulator, [slug, rawValue]) => {
-    const numericValue = Number(rawValue);
-    accumulator[slug] = Number.isFinite(numericValue) && numericValue >= 0 ? Math.floor(numericValue) : 0;
-    return accumulator;
-  }, {});
-}
-
-async function fileExists(filePath) {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-async function readJsonViews(filePath) {
-  if (!(await fileExists(filePath))) {
-    return {};
-  }
-
-  try {
-    const rawData = await fs.readFile(filePath, 'utf8');
-    return normalizeViews(JSON.parse(rawData));
-  } catch (error) {
-    return {};
-  }
-}
-
-function escapeSqlString(value) {
-  return String(value).replace(/'/g, "''");
-}
-
-async function runSql(sql, { json = false } = {}) {
-  const args = [];
-
-  if (json) {
-    args.push('-json');
-  }
-
-  args.push(DB_FILE_PATH, sql);
-
-  const { stdout } = await execFileAsync('sqlite3', args);
-
-  if (!json) {
-    return stdout.trim();
-  }
-
-  const trimmedOutput = stdout.trim();
-  return JSON.parse(trimmedOutput || '[]');
-}
-
-async function writeInitialViews(viewsBySlug) {
-  const entries = Object.entries(normalizeViews(viewsBySlug));
-
-  if (entries.length === 0) {
-    return;
-  }
-
-  const values = entries
-    .map(([slug, views]) => `('${escapeSqlString(slug)}', ${views})`)
-    .join(', ');
-
-  await runSql(`
-    INSERT INTO post_views (slug, views)
-    VALUES ${values}
-    ON CONFLICT(slug) DO UPDATE SET views = excluded.views;
-  `);
-}
-
-async function ensureDatabase() {
-  if (initializationPromise) {
-    return initializationPromise;
-  }
-
-  initializationPromise = (async () => {
-    await fs.mkdir(path.dirname(DB_FILE_PATH), { recursive: true });
-
-    await runSql(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS post_views (
-        slug TEXT PRIMARY KEY,
-        views INTEGER NOT NULL DEFAULT 0 CHECK (views >= 0)
-      );
-    `);
-
-    const [{ count = 0 } = {}] = await runSql('SELECT COUNT(*) AS count FROM post_views;', { json: true });
-
-    if (Number(count) > 0) {
-      return;
-    }
-
-    const [seedViews, legacyViews] = await Promise.all([
-      readJsonViews(SEED_FILE_PATH),
-      readJsonViews(LEGACY_DATA_FILE_PATH),
-    ]);
-
-    await writeInitialViews({
-      ...seedViews,
-      ...legacyViews,
-    });
-  })().catch((error) => {
-    initializationPromise = null;
-    throw error;
-  });
-
-  return initializationPromise;
-}
-
-async function readViewsFromDatabase() {
-  await ensureDatabase();
-
-  const rows = await runSql('SELECT slug, views FROM post_views ORDER BY slug;', { json: true });
-  return normalizeViews(Object.fromEntries(rows.map((row) => [row.slug, row.views])));
-}
-
-async function incrementViewCount(slug) {
-  await ensureDatabase();
-
-  const safeSlug = escapeSqlString(slug);
-  const rows = await runSql(`
-    INSERT INTO post_views (slug, views)
-    VALUES ('${safeSlug}', 1)
-    ON CONFLICT(slug) DO UPDATE SET views = post_views.views + 1
-    RETURNING views;
-  `, { json: true });
-
-  const nextViews = Number(rows[0]?.views);
-  return Number.isFinite(nextViews) && nextViews >= 0 ? Math.floor(nextViews) : 0;
-}
 
 function queueWrite(task) {
   writeQueue = writeQueue.then(task, task);
   return writeQueue;
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+
+  if (chunks.length === 0) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (error) {
+    throw createHttpError(400, 'Request body must be valid JSON.');
+  }
 }
 
 function sendJson(res, statusCode, payload) {
@@ -166,11 +58,33 @@ function sendNotFound(res) {
   sendJson(res, 404, { error: 'Not found' });
 }
 
+function getNumericId(value) {
+  const numericValue = Number(value);
+
+  if (!Number.isInteger(numericValue) || numericValue <= 0) {
+    return null;
+  }
+
+  return numericValue;
+}
+
+function ensureAdminAccess(req) {
+  if (!ADMIN_API_KEY) {
+    throw createHttpError(503, 'ADMIN_API_KEY is not configured.');
+  }
+
+  const requestKey = String(req.headers['x-admin-key'] || '').trim();
+
+  if (!requestKey || requestKey !== ADMIN_API_KEY) {
+    throw createHttpError(401, 'Admin key is invalid.');
+  }
+}
+
 async function handleRequest(req, res) {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
   if (req.method === 'GET' && requestUrl.pathname === '/api/views') {
-    const views = await readViewsFromDatabase();
+    const views = await getAllPostViews();
     sendJson(res, 200, { views });
     return;
   }
@@ -183,14 +97,150 @@ async function handleRequest(req, res) {
       return;
     }
 
-    const views = await queueWrite(() => incrementViewCount(slug));
+    const views = await queueWrite(() => incrementPostView(slug));
 
     console.log(`[views-server] ${slug} -> ${views}`);
     sendJson(res, 200, { slug, views });
     return;
   }
 
+  if (req.method === 'GET' && requestUrl.pathname === '/api/questions') {
+    const archived = requestUrl.searchParams.get('archived') === 'true';
+    const questions = await getQuestions({ archived });
+    sendJson(res, 200, { questions });
+    return;
+  }
+
+  const publicLogsMatch = requestUrl.pathname.match(/^\/api\/questions\/(\d+)\/logs$/);
+
+  if (req.method === 'GET' && publicLogsMatch) {
+    const questionId = getNumericId(publicLogsMatch[1]);
+
+    if (!questionId) {
+      sendJson(res, 400, { error: 'Question id is invalid.' });
+      return;
+    }
+
+    const question = await getQuestionById(questionId);
+
+    if (!question) {
+      sendNotFound(res);
+      return;
+    }
+
+    const logs = await getQuestionLogs(questionId);
+    sendJson(res, 200, { question, logs });
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith('/api/admin/')) {
+    ensureAdminAccess(req);
+  }
+
+  if (req.method === 'GET' && requestUrl.pathname === '/api/admin/questions') {
+    const questions = await getAdminQuestions();
+    sendJson(res, 200, { questions });
+    return;
+  }
+
+  if (req.method === 'POST' && requestUrl.pathname === '/api/admin/questions') {
+    const payload = await readJsonBody(req);
+    const question = await queueWrite(() => createQuestion(payload));
+    sendJson(res, 201, { question });
+    return;
+  }
+
+  const adminQuestionMatch = requestUrl.pathname.match(/^\/api\/admin\/questions\/(\d+)$/);
+
+  if (req.method === 'PATCH' && adminQuestionMatch) {
+    const questionId = getNumericId(adminQuestionMatch[1]);
+
+    if (!questionId) {
+      sendJson(res, 400, { error: 'Question id is invalid.' });
+      return;
+    }
+
+    const payload = await readJsonBody(req);
+    const question = await queueWrite(() => updateQuestion(questionId, payload));
+
+    if (!question) {
+      sendNotFound(res);
+      return;
+    }
+
+    sendJson(res, 200, { question });
+    return;
+  }
+
+  const adminQuestionLogsMatch = requestUrl.pathname.match(/^\/api\/admin\/questions\/(\d+)\/logs$/);
+
+  if (adminQuestionLogsMatch) {
+    const questionId = getNumericId(adminQuestionLogsMatch[1]);
+
+    if (!questionId) {
+      sendJson(res, 400, { error: 'Question id is invalid.' });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      const question = await getQuestionById(questionId);
+
+      if (!question) {
+        sendNotFound(res);
+        return;
+      }
+
+      const logs = await getQuestionLogs(questionId);
+      sendJson(res, 200, { question, logs });
+      return;
+    }
+
+    if (req.method === 'POST') {
+      const payload = await readJsonBody(req);
+      const log = await queueWrite(() => createQuestionLog(questionId, payload));
+      sendJson(res, 201, { log });
+      return;
+    }
+  }
+
+  const adminLogMatch = requestUrl.pathname.match(/^\/api\/admin\/logs\/(\d+)$/);
+
+  if (adminLogMatch) {
+    const logId = getNumericId(adminLogMatch[1]);
+
+    if (!logId) {
+      sendJson(res, 400, { error: 'Log id is invalid.' });
+      return;
+    }
+
+    if (req.method === 'PATCH') {
+      const payload = await readJsonBody(req);
+      const log = await queueWrite(() => updateQuestionLog(logId, payload));
+
+      if (!log) {
+        sendNotFound(res);
+        return;
+      }
+
+      sendJson(res, 200, { log });
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      const deleted = await queueWrite(() => deleteQuestionLog(logId));
+
+      if (!deleted) {
+        sendNotFound(res);
+        return;
+      }
+
+      sendJson(res, 200, { deleted: true });
+      return;
+    }
+  }
+
   if (req.method === 'GET' && requestUrl.pathname === '/health') {
+    await ensureDatabase();
     sendJson(res, 200, { ok: true });
     return;
   }
@@ -199,8 +249,16 @@ async function handleRequest(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  handleRequest(req, res).catch(() => {
-    sendJson(res, 500, { error: 'Internal server error' });
+  handleRequest(req, res).catch((error) => {
+    const statusCode = error?.statusCode || 500;
+
+    if (statusCode >= 500) {
+      console.error(`[views-server] ${error.message}`);
+    }
+
+    sendJson(res, statusCode, {
+      error: statusCode >= 500 ? 'Internal server error' : error.message,
+    });
   });
 });
 
@@ -213,7 +271,7 @@ server.listen(PORT, '127.0.0.1', () => {
   ensureDatabase()
     .then(() => {
       console.log(`[views-server] Running on http://127.0.0.1:${PORT}`);
-      console.log(`[views-server] Database file: ${DB_FILE_PATH}`);
+      console.log('[views-server] Postgres schema is ready');
     })
     .catch((error) => {
       console.error(`[views-server] Failed to initialize database: ${error.message}`);
@@ -223,7 +281,11 @@ server.listen(PORT, '127.0.0.1', () => {
 
 function shutdown() {
   server.close(() => {
-    process.exit(0);
+    closePool()
+      .catch(() => {})
+      .finally(() => {
+        process.exit(0);
+      });
   });
 }
 

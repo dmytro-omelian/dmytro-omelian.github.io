@@ -9,7 +9,7 @@ const othersItems = [
 const Others = () => {
     return (
         <div className="others-container">
-            <h2>Other activities</h2>
+            <h2 className="others-title">Some small activities</h2>
             {othersItems.map((item, index) => (
                 <div className="others-item" key={index}>
                     <div className="others-date">{item.date}</div>

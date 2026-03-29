@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import About from './components/about/About';
 import Experience from './components/experience/Experience';
 import Books from './components/books/Books';
@@ -9,26 +9,36 @@ import Footer from './components/footer/Footer';
 import './App.css';
 import Posts, { PostDetail } from './components/posts/Posts';
 import Contact from './components/contact/Contact';
+import Admin from './components/admin/Admin';
 
+function AppLayout() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname === '/admin';
+
+  return (
+    <div className='app-container'>
+      {!isAdminRoute && <Header />}
+      <main className='content'>
+        <Routes>
+          <Route path="/" element={<About />} />
+          <Route path="/experience" element={<Experience />} />
+          <Route path="/books" element={<Books />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/blog" element={<Posts />} />
+          <Route path="/blog/:slug" element={<PostDetail />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/admin" element={<Admin />} />
+        </Routes>
+      </main>
+      {!isAdminRoute && <Footer />}
+    </div>
+  );
+}
 
 function App() {
   return (
     <Router>
-      <div className='app-container'>
-        <Header />
-        <main className='content'>
-          <Routes>
-            <Route path="/" element={<About />} />
-            <Route path="/experience" element={<Experience />} />
-            <Route path="/books" element={<Books />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/blog" element={<Posts />} />
-            <Route path="/blog/:slug" element={<PostDetail />} />
-            <Route path="/contact" element={<Contact />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <AppLayout />
     </Router>
   );
 }

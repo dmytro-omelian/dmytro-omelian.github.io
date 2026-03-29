@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getAllPostViews, getPostViewsForSlug, incrementPostView } from './postViews';
+import NewsletterSignup from '../forms/NewsletterSignup';
 import './Posts.css';
 
 const posts = [
@@ -344,13 +345,11 @@ function Posts() {
                     ))}
             </div>
             <div className="newsletter-section">
-                <iframe
-                    src="https://domelian.substack.com/embed"
-                    style={{ border: '1px solid #EEE', background: 'white' }}
-                    frameBorder="0"
-                    scrolling="no"
-                    title="Domelian Newsletter"
-                ></iframe>
+                <h3>Get the next note</h3>
+                <p className="newsletter-copy">
+                    Essays, experiments, and updates from what I&apos;m building and learning.
+                </p>
+                <NewsletterSignup title="experimenting is cool, i think" />
             </div>
         </div>
     );
@@ -412,13 +411,11 @@ export function PostDetail() {
                 <PostMeta date={item.date} viewCount={viewCount} selected />
                 {item.content.map(renderContentBlock)}
                 <div className="newsletter-section">
-                    <iframe
-                        src="https://domelian.substack.com/embed"
-                        style={{ border: '1px solid #EEE', background: 'white' }}
-                        frameBorder="0"
-                        scrolling="no"
-                        title="Domelian Newsletter"
-                    ></iframe>
+                    <h3>Get the next note</h3>
+                    <p className="newsletter-copy">
+                        Essays, experiments, and updates from what I&apos;m building and learning.
+                    </p>
+                    <NewsletterSignup title="experimenting is cool, i think" />
                 </div>
             </div>
         </div>
