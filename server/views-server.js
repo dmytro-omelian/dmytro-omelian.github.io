@@ -1,11 +1,16 @@
 const http = require('http');
 const fs = require('fs/promises');
 const path = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 
+const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.VIEWS_PORT) || 4001;
-const DATA_FILE_PATH = path.resolve(__dirname, '../data/postViews.json');
+const DB_FILE_PATH = path.resolve(__dirname, process.env.VIEWS_DB_PATH || '../data/postViews.sqlite');
+const LEGACY_DATA_FILE_PATH = path.resolve(__dirname, '../data/postViews.json');
 const SEED_FILE_PATH = path.resolve(__dirname, '../src/data/postViewsSeed.json');
 
+let initializationPromise = null;
 let writeQueue = Promise.resolve();
 
 function normalizeViews(input) {
@@ -29,41 +34,119 @@ async function fileExists(filePath) {
   }
 }
 
-async function ensureDataFile() {
-  await fs.mkdir(path.dirname(DATA_FILE_PATH), { recursive: true });
-
-  if (await fileExists(DATA_FILE_PATH)) {
-    return;
+async function readJsonViews(filePath) {
+  if (!(await fileExists(filePath))) {
+    return {};
   }
-
-  let initialViews = {};
-
-  if (await fileExists(SEED_FILE_PATH)) {
-    try {
-      const seedRaw = await fs.readFile(SEED_FILE_PATH, 'utf8');
-      initialViews = normalizeViews(JSON.parse(seedRaw));
-    } catch (error) {
-      initialViews = {};
-    }
-  }
-
-  await fs.writeFile(DATA_FILE_PATH, `${JSON.stringify(initialViews, null, 2)}\n`, 'utf8');
-}
-
-async function readViewsFromFile() {
-  await ensureDataFile();
 
   try {
-    const rawData = await fs.readFile(DATA_FILE_PATH, 'utf8');
+    const rawData = await fs.readFile(filePath, 'utf8');
     return normalizeViews(JSON.parse(rawData));
   } catch (error) {
     return {};
   }
 }
 
-async function writeViewsToFile(viewsBySlug) {
-  const normalized = normalizeViews(viewsBySlug);
-  await fs.writeFile(DATA_FILE_PATH, `${JSON.stringify(normalized, null, 2)}\n`, 'utf8');
+function escapeSqlString(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+async function runSql(sql, { json = false } = {}) {
+  const args = [];
+
+  if (json) {
+    args.push('-json');
+  }
+
+  args.push(DB_FILE_PATH, sql);
+
+  const { stdout } = await execFileAsync('sqlite3', args);
+
+  if (!json) {
+    return stdout.trim();
+  }
+
+  const trimmedOutput = stdout.trim();
+  return JSON.parse(trimmedOutput || '[]');
+}
+
+async function writeInitialViews(viewsBySlug) {
+  const entries = Object.entries(normalizeViews(viewsBySlug));
+
+  if (entries.length === 0) {
+    return;
+  }
+
+  const values = entries
+    .map(([slug, views]) => `('${escapeSqlString(slug)}', ${views})`)
+    .join(', ');
+
+  await runSql(`
+    INSERT INTO post_views (slug, views)
+    VALUES ${values}
+    ON CONFLICT(slug) DO UPDATE SET views = excluded.views;
+  `);
+}
+
+async function ensureDatabase() {
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  initializationPromise = (async () => {
+    await fs.mkdir(path.dirname(DB_FILE_PATH), { recursive: true });
+
+    await runSql(`
+      PRAGMA journal_mode = WAL;
+      CREATE TABLE IF NOT EXISTS post_views (
+        slug TEXT PRIMARY KEY,
+        views INTEGER NOT NULL DEFAULT 0 CHECK (views >= 0)
+      );
+    `);
+
+    const [{ count = 0 } = {}] = await runSql('SELECT COUNT(*) AS count FROM post_views;', { json: true });
+
+    if (Number(count) > 0) {
+      return;
+    }
+
+    const [seedViews, legacyViews] = await Promise.all([
+      readJsonViews(SEED_FILE_PATH),
+      readJsonViews(LEGACY_DATA_FILE_PATH),
+    ]);
+
+    await writeInitialViews({
+      ...seedViews,
+      ...legacyViews,
+    });
+  })().catch((error) => {
+    initializationPromise = null;
+    throw error;
+  });
+
+  return initializationPromise;
+}
+
+async function readViewsFromDatabase() {
+  await ensureDatabase();
+
+  const rows = await runSql('SELECT slug, views FROM post_views ORDER BY slug;', { json: true });
+  return normalizeViews(Object.fromEntries(rows.map((row) => [row.slug, row.views])));
+}
+
+async function incrementViewCount(slug) {
+  await ensureDatabase();
+
+  const safeSlug = escapeSqlString(slug);
+  const rows = await runSql(`
+    INSERT INTO post_views (slug, views)
+    VALUES ('${safeSlug}', 1)
+    ON CONFLICT(slug) DO UPDATE SET views = post_views.views + 1
+    RETURNING views;
+  `, { json: true });
+
+  const nextViews = Number(rows[0]?.views);
+  return Number.isFinite(nextViews) && nextViews >= 0 ? Math.floor(nextViews) : 0;
 }
 
 function queueWrite(task) {
@@ -87,7 +170,7 @@ async function handleRequest(req, res) {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
   if (req.method === 'GET' && requestUrl.pathname === '/api/views') {
-    const views = await readViewsFromFile();
+    const views = await readViewsFromDatabase();
     sendJson(res, 200, { views });
     return;
   }
@@ -100,12 +183,7 @@ async function handleRequest(req, res) {
       return;
     }
 
-    const views = await queueWrite(async () => {
-      const currentViews = await readViewsFromFile();
-      currentViews[slug] = (currentViews[slug] || 0) + 1;
-      await writeViewsToFile(currentViews);
-      return currentViews[slug];
-    });
+    const views = await queueWrite(() => incrementViewCount(slug));
 
     console.log(`[views-server] ${slug} -> ${views}`);
     sendJson(res, 200, { slug, views });
@@ -132,8 +210,15 @@ server.on('error', (error) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[views-server] Running on http://127.0.0.1:${PORT}`);
-  console.log(`[views-server] Data file: ${DATA_FILE_PATH}`);
+  ensureDatabase()
+    .then(() => {
+      console.log(`[views-server] Running on http://127.0.0.1:${PORT}`);
+      console.log(`[views-server] Database file: ${DB_FILE_PATH}`);
+    })
+    .catch((error) => {
+      console.error(`[views-server] Failed to initialize database: ${error.message}`);
+      process.exit(1);
+    });
 });
 
 function shutdown() {

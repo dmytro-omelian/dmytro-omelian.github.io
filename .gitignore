@@ -10,6 +10,9 @@
 
 # production
 /build
+/data/postViews.sqlite
+/data/postViews.sqlite-shm
+/data/postViews.sqlite-wal
 
 # misc
 .DS_Store

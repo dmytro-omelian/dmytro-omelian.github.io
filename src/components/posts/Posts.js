@@ -1,8 +1,45 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { getAllPostViews, getPostViewsForSlug, incrementPostView } from './postViews';
 import './Posts.css';
 
 const posts = [
+    {
+        id: 6,
+        slug: "im-23-today",
+        title: "i'm 23 today",
+        date: "March 25, 2026",
+        preview: "so: 23 random facts about me that i probably never mentioned.",
+        content: [
+            "i'm 23 today.",
+            "so: 23 random facts about me that i probably never mentioned.",
+            "1. i have a ukulele that i play once a year. one day i will start my ukulele career.",
+            "2. i played ping pong professionally at school for 1.5 years and once got 3rd place at a city tournament.",
+            "3. i keep saying that i drink coffee. actually, i started only after moving to Lviv (damn, this community...), and my coffee is basically відро of milk with a little bit of coffee.",
+            "4. when i was a child, i had loooots of LEGO.",
+            "5. i have a bicycle but still haven't bought a mudguard or a bell for it. bad.",
+            "6. i take English lessons and, honestly, my speaking still frustrates me sometimes.",
+            "7. i am an active contributor to the dead internet theory, which probably also explains why i don't have TikTok, Instagram, Telegram, Viber, etc.",
+            "8. i want to buy drums one day.",
+            "9. my favorite fruit is an orange.",
+            "10. i am in love with the idea of Meta glasses. and not because i wear glasses, you know.",
+            "11. i want to become a bookworm this year. i even downloaded more books than i can realistically read, but the intention is there.",
+            "12. my first internship was at a crypto company, and right after that i was dangerously close to joining an internship at a gambling company. i was bad at researching companies.",
+            "13. i have 1.5k Apple Notes and 5.5k completed reminders.",
+            "14. i still don't have a driver's license.",
+            "15. i used to solve LeetCode problems for fun. like actual fun.",
+            "16. there are only two people who call me Митько: my grandmother and Andrii -_-",
+            "17. i was born on a Tuesday.",
+            "18. i tried betting on sports events once. lost 150 UAH and quit.",
+            "19. i didn't have a single date during university.",
+            "20. i love reading people and watching behavior. sometimes i can stare at strangers 👀",
+            "21. a school teacher got me into programming 8 years ago. right after that, i joined a programming school, and that's where i met Po for the first time 🥰",
+            "22. once i was fired.",
+            "23. i moved to a new country recently.",
+            "hope that by next year i'll either have +1 here or 24 completely new ones.",
+            "✌️"
+        ]
+    },
     {
         id: 5,
         slug: "now-i-see-how-it-is-coming",
@@ -161,9 +198,30 @@ const posts = [
 ];
 
 const DEFAULT_AUTHOR = 'Dmytro Omelian';
+const viewCountFormatter = new Intl.NumberFormat('en-US');
 
 function getPostAuthor(post) {
     return post.author || DEFAULT_AUTHOR;
+}
+
+function formatViewLabel(viewCount) {
+    const safeViewCount = Number.isFinite(viewCount) && viewCount >= 0 ? Math.floor(viewCount) : 0;
+    const suffix = safeViewCount === 1 ? 'view' : 'views';
+    return `${viewCountFormatter.format(safeViewCount)} ${suffix}`;
+}
+
+function PostMeta({ date, viewCount, selected = false }) {
+    return (
+        <div className={`post-meta${selected ? ' post-meta-selected' : ''}`}>
+            <span className="post-meta-date">{date}</span>
+            {typeof viewCount === 'number' && (
+                <>
+                    <span className="post-meta-separator" aria-hidden="true">•</span>
+                    <span className="post-views">{formatViewLabel(viewCount)}</span>
+                </>
+            )}
+        </div>
+    );
 }
 
 function renderContentBlock(block, index) {
@@ -191,6 +249,26 @@ function renderContentBlock(block, index) {
 }
 
 function Posts() {
+    const [viewsBySlug, setViewsBySlug] = useState({});
+
+    useEffect(() => {
+        let isActive = true;
+
+        getAllPostViews(true)
+            .then(nextViews => {
+                if (isActive) {
+                    setViewsBySlug(nextViews);
+                }
+            })
+            .catch(() => {
+                // Keep the UI usable even if the endpoint is unavailable.
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
     return (
         <div className='posts-container'>
             <h1>Blog</h1>
@@ -206,7 +284,7 @@ function Posts() {
                             className="post-item"
                         >
                             <h3>{post.title}</h3>
-                            <p className="post-date">{post.date}</p>
+                            <PostMeta date={post.date} viewCount={viewsBySlug[post.slug]} />
                             <p className="post-preview">{post.preview}</p>
                         </Link>
                     ))}
@@ -226,8 +304,41 @@ function Posts() {
 
 export function PostDetail() {
     const { slug } = useParams();
-
     const item = posts.find(entry => entry.slug === slug);
+    const [viewCount, setViewCount] = useState();
+
+    useEffect(() => {
+        let isActive = true;
+
+        if (!item) {
+            setViewCount(undefined);
+            return () => {
+                isActive = false;
+            };
+        }
+
+        setViewCount(undefined);
+
+        (async () => {
+            const currentViews = await getPostViewsForSlug(slug);
+
+            if (isActive) {
+                setViewCount(currentViews);
+            }
+
+            const nextViews = await incrementPostView(slug);
+
+            if (isActive) {
+                setViewCount(nextViews);
+            }
+        })().catch(() => {
+            // Keep rendering the post content even if views fail to load.
+        });
+
+        return () => {
+            isActive = false;
+        };
+    }, [item, slug]);
 
     if (!item) {
         return (
@@ -239,12 +350,12 @@ export function PostDetail() {
     }
 
     return (
-        <div className='posts-container'>
+            <div className='posts-container'>
             <div className="selected-item">
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <h2>{item.title}</h2>
                 <p className="post-author">{getPostAuthor(item)}</p>
-                <p className="post-date post-date-selected">{item.date}</p>
+                <PostMeta date={item.date} viewCount={viewCount} selected />
                 {item.content.map(renderContentBlock)}
                 <div className="newsletter-section">
                     <iframe

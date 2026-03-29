@@ -33,14 +33,27 @@
   font-weight: 600;
 }
 
-.post-date {
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 8px 0;
   font-size: 14px;
   color: #666;
 }
 
-.post-date-selected {
+.post-meta-selected {
   margin: 0 0 20px 0;
+}
+
+.post-meta-date,
+.post-views {
+  color: inherit;
+}
+
+.post-meta-separator {
+  color: #a0a0a0;
 }
 
 .post-author {
