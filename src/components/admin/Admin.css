@@ -61,6 +61,7 @@
 
 .admin-input-group input,
 .admin-field input,
+.admin-field select,
 .admin-field textarea,
 .admin-create-question input {
   width: 100%;
@@ -265,11 +266,21 @@
   align-items: center;
   gap: 8px;
   color: #555555;
+  cursor: pointer;
+}
+
+.admin-checkbox input {
+  margin: 0;
 }
 
 .admin-log-list {
   display: grid;
   gap: 20px;
+}
+
+.admin-comment-list {
+  display: grid;
+  gap: 16px;
 }
 
 .admin-log-item {
@@ -278,6 +289,14 @@
   padding: 20px;
   border: 1px solid #e8e8e8;
   background: #ffffff;
+}
+
+.admin-comment-item {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid #e8e8e8;
+  background: #fcfcfc;
 }
 
 .admin-preview {
@@ -318,6 +337,13 @@
   gap: 16px;
 }
 
+.admin-comment-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .admin-log-label {
   margin: 0;
   font-size: 11px;
@@ -332,6 +358,32 @@
   font-size: 19px;
   line-height: 1.25;
   color: #111111;
+}
+
+.admin-comment-meta,
+.admin-comment-email {
+  margin: 4px 0 0;
+  color: #555555;
+}
+
+.admin-comment-email {
+  font-size: 13px;
+}
+
+.admin-comment-body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #111111;
+}
+
+.admin-comment-slug-link {
+  color: #111111;
+  text-decoration: none;
+}
+
+.admin-comment-slug-link:hover {
+  text-decoration: underline;
 }
 
 .admin-log-preview-wrap {
@@ -426,12 +478,14 @@
   .admin-create-question,
   .admin-sidebar-header,
   .admin-workspace-header,
-  .admin-log-item-header {
+  .admin-log-item-header,
+  .admin-comment-item-header {
     grid-template-columns: 1fr;
     display: grid;
   }
 
-  .admin-log-item {
+  .admin-log-item,
+  .admin-comment-item {
     padding: 16px;
   }
 }

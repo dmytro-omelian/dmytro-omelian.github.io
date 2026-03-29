@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { getCommentCounts } from '../../api/siteData';
 import { getAllPostViews, getPostViewsForSlug, incrementPostView } from './postViews';
+import PostComments, { DiscussionIcon, formatDiscussionLabel } from './PostComments';
 import NewsletterSignup from '../forms/NewsletterSignup';
 import './Posts.css';
 
@@ -253,7 +255,7 @@ function formatViewLabel(viewCount) {
     return `${viewCountFormatter.format(safeViewCount)} ${suffix}`;
 }
 
-function PostMeta({ date, viewCount, selected = false }) {
+function PostMeta({ date, viewCount, commentCount, discussionHref, selected = false }) {
     return (
         <div className={`post-meta${selected ? ' post-meta-selected' : ''}`}>
             <span className="post-meta-date">{date}</span>
@@ -261,6 +263,22 @@ function PostMeta({ date, viewCount, selected = false }) {
                 <>
                     <span className="post-meta-separator" aria-hidden="true">•</span>
                     <span className="post-views">{formatViewLabel(viewCount)}</span>
+                </>
+            )}
+            {typeof commentCount === 'number' && (
+                <>
+                    <span className="post-meta-separator" aria-hidden="true">•</span>
+                    {discussionHref ? (
+                        <a className="post-discussion-link" href={discussionHref}>
+                            <DiscussionIcon className="post-discussion-icon" />
+                            <span>{formatDiscussionLabel(commentCount)}</span>
+                        </a>
+                    ) : (
+                        <span className="post-discussion-link post-discussion-link-static">
+                            <DiscussionIcon className="post-discussion-icon" />
+                            <span>{formatDiscussionLabel(commentCount)}</span>
+                        </span>
+                    )}
                 </>
             )}
         </div>
@@ -305,6 +323,7 @@ function renderContentBlock(block, index) {
 
 function Posts() {
     const [viewsBySlug, setViewsBySlug] = useState({});
+    const [commentCountsBySlug, setCommentCountsBySlug] = useState({});
 
     useEffect(() => {
         let isActive = true;
@@ -317,6 +336,24 @@ function Posts() {
             })
             .catch(() => {
                 // Keep the UI usable even if the endpoint is unavailable.
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let isActive = true;
+
+        getCommentCounts(posts.map(post => post.slug))
+            .then(nextCounts => {
+                if (isActive) {
+                    setCommentCountsBySlug(nextCounts);
+                }
+            })
+            .catch(() => {
+                // Keep the blog index usable if the comments endpoint is unavailable.
             });
 
         return () => {
@@ -339,7 +376,11 @@ function Posts() {
                             className="post-item"
                         >
                             <h3>{post.title}</h3>
-                            <PostMeta date={post.date} viewCount={viewsBySlug[post.slug]} />
+                            <PostMeta
+                                date={post.date}
+                                viewCount={viewsBySlug[post.slug]}
+                                commentCount={commentCountsBySlug[post.slug]}
+                            />
                             <p className="post-preview">{post.preview}</p>
                         </Link>
                     ))}
@@ -359,6 +400,7 @@ export function PostDetail() {
     const { slug } = useParams();
     const item = posts.find(entry => entry.slug === slug);
     const [viewCount, setViewCount] = useState();
+    const [commentCount, setCommentCount] = useState();
 
     useEffect(() => {
         let isActive = true;
@@ -408,7 +450,13 @@ export function PostDetail() {
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <h2>{item.title}</h2>
                 <p className="post-author">{getPostAuthor(item)}</p>
-                <PostMeta date={item.date} viewCount={viewCount} selected />
+                <PostMeta
+                    date={item.date}
+                    viewCount={viewCount}
+                    commentCount={commentCount}
+                    discussionHref="#discussion"
+                    selected
+                />
                 {item.content.map(renderContentBlock)}
                 <div className="newsletter-section">
                     <h3>Get the next note</h3>
@@ -417,6 +465,11 @@ export function PostDetail() {
                     </p>
                     <NewsletterSignup title="experimenting is cool, i think" />
                 </div>
+                <PostComments
+                    postSlug={item.slug}
+                    postTitle={item.title}
+                    onCountChange={setCommentCount}
+                />
             </div>
         </div>
     );

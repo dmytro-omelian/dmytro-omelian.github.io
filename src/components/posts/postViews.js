@@ -8,6 +8,7 @@ const VIEWS_ENDPOINT = CONFIGURED_VIEWS_ENDPOINT
   : buildApiUrl(DEFAULT_VIEWS_ENDPOINT);
 const SESSION_VIEW_PREFIX = 'blog_post_viewed_v2_';
 const LOCAL_VIEWS_STORAGE_KEY = 'blog_post_views_v1';
+const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 
 function normalizeViews(input) {
   if (!input || typeof input !== 'object') {
@@ -125,6 +126,15 @@ function markAsCountedInSession(slug) {
   }
 }
 
+function isLocalhostRuntime() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const hostname = String(window.location.hostname || '').trim().toLowerCase();
+  return LOCALHOST_HOSTNAMES.has(hostname) || hostname.endsWith('.localhost');
+}
+
 export async function getAllPostViews(forceRefresh = false) {
   if (!forceRefresh) {
     return cachedViews;
@@ -161,6 +171,15 @@ export async function getPostViewsForSlug(slug) {
 export async function incrementPostView(slug) {
   if (!slug) {
     return 0;
+  }
+
+  if (isLocalhostRuntime()) {
+    if (canUseRemoteEndpoint()) {
+      const views = await getAllPostViews(true);
+      return views[slug] || 0;
+    }
+
+    return getPostViewsForSlug(slug);
   }
 
   const pendingIncrement = pendingIncrementBySlug.get(slug);

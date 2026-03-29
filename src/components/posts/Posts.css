@@ -56,6 +56,26 @@
   color: #a0a0a0;
 }
 
+.post-discussion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-discussion-link-static {
+  cursor: default;
+}
+
+.post-discussion-link:hover {
+  color: #0f766e;
+}
+
+.post-discussion-icon {
+  flex-shrink: 0;
+}
+
 .post-author {
   margin: 0 0 8px 0;
   font-size: 12px;

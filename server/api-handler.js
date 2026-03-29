@@ -1,13 +1,19 @@
 require('./loadEnv');
 
 const {
+  createBlogComment,
   createHttpError,
   createQuestion,
   createQuestionLog,
+  deleteBlogComment,
   deleteQuestionLog,
   ensureDatabase,
+  getAdminBlogComments,
   getAdminQuestions,
+  getBlogCommentCounts,
+  getBlogCommentsBySlug,
   getAllPostViews,
+  getPostViewCount,
   getQuestionById,
   getQuestionLogs,
   getQuestions,
@@ -15,6 +21,7 @@ const {
   updateQuestion,
   updateQuestionLog,
 } = require('./db');
+const { sendCommentNotification } = require('./resend');
 
 let writeQueue = Promise.resolve();
 
@@ -94,6 +101,55 @@ function getHeaderValue(headers, headerName) {
   return String(normalizedValue || '').trim();
 }
 
+function getParsedHeaderUrl(headers, headerName) {
+  const headerValue = getHeaderValue(headers, headerName);
+
+  if (!headerValue) {
+    return null;
+  }
+
+  try {
+    return new URL(headerValue);
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeHostname(hostname) {
+  return String(hostname || '').trim().toLowerCase().replace(/^\[(.*)\]$/, '$1');
+}
+
+function isLocalHostname(hostname) {
+  const normalizedHostname = normalizeHostname(hostname);
+
+  return (
+    normalizedHostname === 'localhost'
+    || normalizedHostname === '127.0.0.1'
+    || normalizedHostname === '::1'
+    || normalizedHostname.endsWith('.localhost')
+  );
+}
+
+function shouldCountPostView({ requestUrl, headers }) {
+  if (isLocalHostname(requestUrl.hostname)) {
+    return false;
+  }
+
+  const originUrl = getParsedHeaderUrl(headers, 'origin');
+
+  if (originUrl && isLocalHostname(originUrl.hostname)) {
+    return false;
+  }
+
+  const refererUrl = getParsedHeaderUrl(headers, 'referer');
+
+  if (refererUrl && isLocalHostname(refererUrl.hostname)) {
+    return false;
+  }
+
+  return true;
+}
+
 function ensureAdminAccess(headers) {
   const adminApiKey = (process.env.ADMIN_API_KEY || '').trim();
 
@@ -116,6 +172,15 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
     return createJsonPayload(200, { views });
   }
 
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/comments/counts') {
+    const rawSlugs = String(requestUrl.searchParams.get('slugs') || '').trim();
+    const postSlugs = rawSlugs
+      ? rawSlugs.split(',').map((slug) => slug.trim()).filter(Boolean)
+      : [];
+    const counts = await getBlogCommentCounts(postSlugs);
+    return createJsonPayload(200, { counts });
+  }
+
   if (normalizedMethod === 'POST' && requestUrl.pathname.startsWith('/api/views/')) {
     const slug = decodeURIComponent(requestUrl.pathname.replace('/api/views/', '')).trim();
 
@@ -123,8 +188,52 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
       return createJsonPayload(400, { error: 'Missing slug' });
     }
 
+    if (!shouldCountPostView({ requestUrl, headers })) {
+      const views = await getPostViewCount(slug);
+      return createJsonPayload(200, { slug, views, counted: false });
+    }
+
     const views = await queueWrite(() => incrementPostView(slug));
-    return createJsonPayload(200, { slug, views });
+    return createJsonPayload(200, { slug, views, counted: true });
+  }
+
+  const publicCommentsMatch = requestUrl.pathname.match(/^\/api\/comments\/([^/]+)$/);
+
+  if (publicCommentsMatch) {
+    const postSlug = decodeURIComponent(publicCommentsMatch[1]).trim();
+
+    if (!postSlug) {
+      return createJsonPayload(400, { error: 'Missing post slug' });
+    }
+
+    if (normalizedMethod === 'GET') {
+      const comments = await getBlogCommentsBySlug(postSlug);
+      return createJsonPayload(200, { comments });
+    }
+
+    if (normalizedMethod === 'POST') {
+      const payload = await readJsonBody();
+      const comment = await queueWrite(() => createBlogComment(postSlug, payload));
+
+      await sendCommentNotification({
+        comment,
+        postTitle: payload.postTitle,
+        siteOrigin: requestUrl.origin,
+      }).catch((error) => {
+        console.error(`[api] Failed to send comment notification: ${error.message}`);
+      });
+
+      return createJsonPayload(201, {
+        comment: {
+          id: comment.id,
+          postSlug: comment.postSlug,
+          authorName: comment.authorName,
+          displayName: comment.displayName,
+          body: comment.body,
+          createdAt: comment.createdAt,
+        },
+      });
+    }
   }
 
   if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/questions') {
@@ -142,7 +251,10 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
       return createJsonPayload(400, { error: 'Question id is invalid.' });
     }
 
-    const question = await getQuestionById(questionId);
+    const question = await getQuestionById(questionId, {
+      includeHidden: false,
+      includeAdminFields: false,
+    });
 
     if (!question) {
       return createJsonPayload(404, { error: 'Not found' });
@@ -159,6 +271,13 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
   if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/questions') {
     const questions = await getAdminQuestions();
     return createJsonPayload(200, { questions });
+  }
+
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/comments') {
+    const comments = await getAdminBlogComments({
+      postSlug: requestUrl.searchParams.get('postSlug') || undefined,
+    });
+    return createJsonPayload(200, { comments });
   }
 
   if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/questions') {
@@ -235,6 +354,26 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
 
     if (normalizedMethod === 'DELETE') {
       const deleted = await queueWrite(() => deleteQuestionLog(logId));
+
+      if (!deleted) {
+        return createJsonPayload(404, { error: 'Not found' });
+      }
+
+      return createJsonPayload(200, { deleted: true });
+    }
+  }
+
+  const adminCommentMatch = requestUrl.pathname.match(/^\/api\/admin\/comments\/(\d+)$/);
+
+  if (adminCommentMatch) {
+    const commentId = getNumericId(adminCommentMatch[1]);
+
+    if (!commentId) {
+      return createJsonPayload(400, { error: 'Comment id is invalid.' });
+    }
+
+    if (normalizedMethod === 'DELETE') {
+      const deleted = await queueWrite(() => deleteBlogComment(commentId));
 
       if (!deleted) {
         return createJsonPayload(404, { error: 'Not found' });

@@ -51,12 +51,44 @@ export async function getPublicQuestionLogs(questionId) {
   return requestJson(`/api/questions/${questionId}/logs`);
 }
 
+export async function getCommentCounts(postSlugs = []) {
+  const normalizedPostSlugs = Array.isArray(postSlugs)
+    ? postSlugs.map((postSlug) => String(postSlug || '').trim()).filter(Boolean)
+    : [];
+  const search = normalizedPostSlugs.length > 0
+    ? `?slugs=${encodeURIComponent(normalizedPostSlugs.join(','))}`
+    : '';
+  const payload = await requestJson(`/api/comments/counts${search}`);
+  return payload.counts || {};
+}
+
+export async function getPublicComments(postSlug) {
+  const payload = await requestJson(`/api/comments/${encodeURIComponent(postSlug)}`);
+  return payload.comments || [];
+}
+
+export async function createPublicComment(postSlug, comment) {
+  return requestJson(`/api/comments/${encodeURIComponent(postSlug)}`, {
+    method: 'POST',
+    body: JSON.stringify(comment),
+  });
+}
+
 export async function getAdminQuestions(adminKey) {
   const payload = await requestJson('/api/admin/questions', {
     headers: createAdminHeaders(adminKey),
   });
 
   return payload.questions || [];
+}
+
+export async function getAdminComments(adminKey, postSlug) {
+  const search = postSlug ? `?postSlug=${encodeURIComponent(postSlug)}` : '';
+  const payload = await requestJson(`/api/admin/comments${search}`, {
+    headers: createAdminHeaders(adminKey),
+  });
+
+  return payload.comments || [];
 }
 
 export async function createAdminQuestion(adminKey, question) {
@@ -99,6 +131,13 @@ export async function updateAdminQuestionLog(adminKey, logId, log) {
 
 export async function deleteAdminQuestionLog(adminKey, logId) {
   return requestJson(`/api/admin/logs/${logId}`, {
+    method: 'DELETE',
+    headers: createAdminHeaders(adminKey),
+  });
+}
+
+export async function deleteAdminComment(adminKey, commentId) {
+  return requestJson(`/api/admin/comments/${commentId}`, {
     method: 'DELETE',
     headers: createAdminHeaders(adminKey),
   });
