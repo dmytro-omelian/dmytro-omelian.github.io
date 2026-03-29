@@ -5,7 +5,7 @@ import './Posts.css';
 
 const posts = [
     {
-        id: 6,
+        id: 7,
         slug: "im-23-today",
         title: "i'm 23 today",
         date: "March 25, 2026",
@@ -38,6 +38,48 @@ const posts = [
             "23. i moved to a new country recently.",
             "hope that by next year i'll either have +1 here or 24 completely new ones.",
             "✌️"
+        ],
+    },
+    {
+        id: 6,
+        slug: "how-donald-knuths-ai-experiment-changed-my-approach-to-testing-ideas",
+        title: "How Donald Knuth's AI Experiment Changed My Approach to Testing Ideas",
+        author: "Dmytro Omelian",
+        date: "March 21, 2026",
+        preview: "Donald Knuth just changed how I think about validating ideas.",
+        content: [
+            "Donald Knuth just changed how I think about validating ideas.",
+            "Here's the backstory: Knuth, the godfather of computer science, had been stuck on an open graph theory conjecture for weeks.",
+            "His colleague Filip Stappers fed the exact problem to Claude (Anthropic). In roughly 1 hour and 31 systematic explorations, Claude tried brute-force searches, invented what he called serpentine patterns, hit dead ends, pivoted strategies, and eventually found a working solution for all cases [1].",
+            "Knuth's reaction? \"It seems that I'll have to revise my opinions about 'generative AI' one of these days.\"",
+            "This paper is so impressive, even if I definitely did not understand all of it.",
+            "But the key point I understood and immediately asked myself was simple: why am I still validating my ideas manually?",
+            "So I started doing exactly that with Claude Cowork. Thanks to Yuriy Zaremba for giving the whole team access.",
+            { type: "heading", text: "The process" },
+            "The last experiment was on Friday: validating a hypothesis about bad emails at AiSDR.",
+            "The process is surprisingly simple:",
+            "-> I described the hypothesis I wanted to validate. I had already done some Datadog work to come up with it.",
+            "-> I gave Claude the API key for one of our providers and the context it needed.",
+            "-> I provided limitations and restrictions.",
+            "-> Claude wrote the code, built the filtration algorithm, ran the experiments, and logged everything [2].",
+            "-> It calculated metrics, tested edge cases, and iterated on the approach.",
+            "-> I got back structured results with all the reasoning visible.",
+            "It's like having a research partner who doesn't sleep, doesn't get bored, and documents every single step.",
+            "What impressed me most was the process itself. It looked exactly like what Knuth described in his paper. Claude did not just try one thing. It explored systematically. It tried an approach, evaluated it, hit a wall, changed direction, and kept going.",
+            "That's not generating text. That's experimenting.",
+            "The difference between reading about AI capabilities and actually watching it validate your hypothesis in real time, writing code, running calculations, and logging results, is huge. It also saves an absurd amount of time.",
+            "Back when I was doing research at the Center for Responsible AI at NYU on incorporating stability objectives into the design of data-intensive pipelines, I ran lots of experiments on my own. Now I can see that with tools like this, I would mostly create hypotheses, analyze them, and top up my Claude account balance from time to time :) [3]",
+            "If you have an idea you've been sitting on because testing it properly feels like too much work, just describe it. Let Claude do the experimenting.",
+            "You might be surprised what comes back.",
+            { type: "heading", text: "References" },
+            {
+                type: "link",
+                prefix: "[1] Paper: ",
+                text: "claude-cycles.pdf",
+                url: "https://www-cs-faculty.stanford.edu/~knuth/papers/claude-cycles.pdf"
+            },
+            "[2] Logging is important since I can validate every step on a small sample first, then scale up.",
+            "[3] This research was online, and thanks to Ukrainian Catholic University and UCU Faculty of Applied Sciences / APPS UCU."
         ]
     },
     {
@@ -245,6 +287,18 @@ function renderContentBlock(block, index) {
         );
     }
 
+    if (block?.type === 'link') {
+        return (
+            <p key={index}>
+                {block.prefix}
+                <a href={block.url} target="_blank" rel="noopener noreferrer">
+                    {block.text}
+                </a>
+                {block.suffix}
+            </p>
+        );
+    }
+
     return null;
 }
 
@@ -350,7 +404,7 @@ export function PostDetail() {
     }
 
     return (
-            <div className='posts-container'>
+        <div className='posts-container'>
             <div className="selected-item">
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <h2>{item.title}</h2>
