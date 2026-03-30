@@ -150,13 +150,6 @@
   margin-right: auto;
 }
 
-.newsletter-section h3 {
-  margin: 0 0 20px 0;
-  color: #495057;
-  font-size: 24px;
-  font-weight: 600;
-}
-
 .newsletter-section iframe {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

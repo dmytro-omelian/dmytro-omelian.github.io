@@ -21,6 +21,7 @@ const {
   updateQuestion,
   updateQuestionLog,
 } = require('./db');
+const { handleMcpRequest } = require('./mcp-handler');
 const { sendCommentNotification } = require('./resend');
 
 let writeQueue = Promise.resolve();
@@ -48,14 +49,6 @@ async function readNodeJsonBody(req) {
   }
 }
 
-function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': 'no-store',
-  });
-  res.end(JSON.stringify(payload));
-}
-
 function createJsonPayload(statusCode, payload) {
   return {
     statusCode,
@@ -63,14 +56,51 @@ function createJsonPayload(statusCode, payload) {
   };
 }
 
-function createJsonResponse(statusCode, payload) {
-  return new Response(JSON.stringify(payload), {
-    status: statusCode,
+function normalizeResponse(response) {
+  if (Object.prototype.hasOwnProperty.call(response, 'payload')) {
+    return {
+      statusCode: response.statusCode,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        ...(response.headers || {}),
+      },
+      body: JSON.stringify(response.payload),
+    };
+  }
+
+  return {
+    statusCode: response.statusCode,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
+      ...(response.headers || {}),
     },
+    body: response.body || '',
+  };
+}
+
+function sendNodeResponse(res, response) {
+  const normalizedResponse = normalizeResponse(response);
+  res.writeHead(normalizedResponse.statusCode, normalizedResponse.headers);
+  res.end(normalizedResponse.body);
+}
+
+function createWebResponse(response) {
+  const normalizedResponse = normalizeResponse(response);
+
+  return new Response(normalizedResponse.body, {
+    status: normalizedResponse.statusCode,
+    headers: normalizedResponse.headers,
   });
+}
+
+function isMcpPath(pathname) {
+  return (
+    pathname === '/mcp'
+    || pathname === '/mcp/'
+    || pathname === '/api/mcp'
+    || pathname === '/api/mcp/'
+  );
 }
 
 function getNumericId(value) {
@@ -414,17 +444,24 @@ async function handleNodeApiRequest(req, res) {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
   try {
-    const response = await routeApiRequest({
+    const response = isMcpPath(requestUrl.pathname)
+      ? await handleMcpRequest({
+        method: req.method,
+        requestUrl,
+        headers: req.headers,
+        readJsonBody: () => readNodeJsonBody(req),
+      })
+      : await routeApiRequest({
       method: req.method,
       requestUrl,
       headers: req.headers,
       readJsonBody: () => readNodeJsonBody(req),
     });
 
-    sendJson(res, response.statusCode, response.payload);
+    sendNodeResponse(res, response);
   } catch (error) {
     const response = createErrorPayload(error);
-    sendJson(res, response.statusCode, response.payload);
+    sendNodeResponse(res, response);
   }
 }
 
@@ -438,17 +475,25 @@ async function readWebJsonBody(request) {
 
 async function handleWebApiRequest(request) {
   try {
-    const response = await routeApiRequest({
+    const requestUrl = new URL(request.url);
+    const response = isMcpPath(requestUrl.pathname)
+      ? await handleMcpRequest({
+        method: request.method,
+        requestUrl,
+        headers: request.headers,
+        readJsonBody: () => readWebJsonBody(request),
+      })
+      : await routeApiRequest({
       method: request.method,
-      requestUrl: new URL(request.url),
+      requestUrl,
       headers: request.headers,
       readJsonBody: () => readWebJsonBody(request),
     });
 
-    return createJsonResponse(response.statusCode, response.payload);
+    return createWebResponse(response);
   } catch (error) {
     const response = createErrorPayload(error);
-    return createJsonResponse(response.statusCode, response.payload);
+    return createWebResponse(response);
   }
 }
 

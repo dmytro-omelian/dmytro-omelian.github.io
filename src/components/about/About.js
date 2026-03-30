@@ -66,7 +66,6 @@ function About() {
                     <News />
                 </div>
                 <div className="newsletter-section">
-                    <h3>Get the next note</h3>
                     <p className="newsletter-copy">
                         Essays, experiments, and updates from what I&apos;m building and learning.
                     </p>

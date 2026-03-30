@@ -2,13 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/mcp/:path*",
+      "destination": "/api?route=mcp/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api?route=:path*"
     }
   ],
   "functions": {
     "api/index.mjs": {
-      "includeFiles": "server/schema.sql"
+      "includeFiles": "{server/schema.sql,src/components/**/*.js}"
     }
   }
 }

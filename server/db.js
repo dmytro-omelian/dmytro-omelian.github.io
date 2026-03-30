@@ -502,6 +502,40 @@ async function getQuestionById(
   return mapQuestionRow(result.rows[0], { includeAdminFields });
 }
 
+async function getQuestionBySlug(
+  slug,
+  { includeHidden = false, includeAdminFields = false } = {},
+) {
+  await ensureDatabase();
+
+  const normalizedSlug = sanitizeSlug(slug, 'slug');
+  const queryText = `
+    SELECT
+      q.id,
+      q.slug,
+      q.title,
+      q.is_archived,
+      q.is_hidden,
+      q.priority,
+      q.sort_order,
+      COUNT(l.id)::int AS log_count,
+      MAX(l.logged_at) AS latest_log_date
+    FROM open_questions q
+    LEFT JOIN open_question_logs l ON l.question_id = q.id
+    WHERE q.slug = $1
+    ${includeHidden ? '' : 'AND q.is_hidden = FALSE'}
+    GROUP BY q.id
+  `;
+
+  const result = await query(queryText, [normalizedSlug]);
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return mapQuestionRow(result.rows[0], { includeAdminFields });
+}
+
 async function getQuestions({ archived = false } = {}) {
   await ensureDatabase();
 
@@ -709,6 +743,7 @@ module.exports = {
   getAllPostViews,
   getPostViewCount,
   getQuestionById,
+  getQuestionBySlug,
   getQuestionLogs,
   getQuestions,
   incrementPostView,
