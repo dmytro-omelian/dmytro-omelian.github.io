@@ -473,6 +473,8 @@ async function ensureDatabase() {
     await seedDefaultPostViews();
     await seedReadingListEntries();
     await backfillReadingListSlugs();
+    await normalizeReadingListSortOrders();
+    await ensureReadingListSortOrderUniqueIndex();
     await enforceReadingListSlugConstraint();
   })().catch((error) => {
     initializationPromise = null;
@@ -788,6 +790,32 @@ async function backfillReadingListSlugs() {
       `, [slug, entryId]);
     }
   });
+}
+
+async function normalizeReadingListSortOrders() {
+  await withTransaction(async (db) => {
+    await db.query(`
+      WITH ordered AS (
+        SELECT
+          id,
+          ROW_NUMBER() OVER (PARTITION BY year ORDER BY sort_order ASC, id ASC) - 1 AS new_sort_order
+        FROM reading_list_entries
+      )
+      UPDATE reading_list_entries
+      SET sort_order = ordered.new_sort_order,
+          updated_at = NOW()
+      FROM ordered
+      WHERE reading_list_entries.id = ordered.id
+        AND reading_list_entries.sort_order <> ordered.new_sort_order
+    `);
+  });
+}
+
+async function ensureReadingListSortOrderUniqueIndex() {
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS reading_list_entries_year_sort_unique_idx
+      ON reading_list_entries (year, sort_order)
+  `);
 }
 
 async function enforceReadingListSlugConstraint() {

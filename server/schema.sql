@@ -80,8 +80,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS reading_list_entries_slug_unique_idx
   ON reading_list_entries (slug)
   WHERE slug IS NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS reading_list_entries_year_sort_unique_idx
-  ON reading_list_entries (year, sort_order);
-
 CREATE INDEX IF NOT EXISTS reading_list_entries_year_sort_idx
   ON reading_list_entries (year DESC, sort_order ASC, updated_at DESC, id ASC);
