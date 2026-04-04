@@ -112,6 +112,35 @@
   margin-bottom: 10px;
 }
 
+.post-figure {
+  margin: 24px 0 30px;
+}
+
+.post-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.post-figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: center;
+  color: #666;
+}
+
+.post-list {
+  margin: 12px 0 20px;
+  padding-left: 22px;
+  color: #333;
+}
+
+.post-list li + li {
+  margin-top: 8px;
+}
+
 .post-section-heading {
   margin: 32px 0 12px 0;
   font-size: 24px;

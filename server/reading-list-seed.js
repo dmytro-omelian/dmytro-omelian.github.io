@@ -46,6 +46,12 @@ function assignSeedSlugs(entries) {
 
 const legacyReadingListEntries = assignSeedSlugs([
   ...createSeedEntries(2026, [
+    {
+      title: '1984 (ukr)',
+      author: 'George Orwell',
+      relatedPostSlug: '1984-book-note',
+      relatedPostLabel: 'blog post',
+    },
     { title: 'Outliers', author: 'Malcolm Gladwell' },
     { title: '🔥 House of Huawei', author: 'Eva Dou' },
     {
