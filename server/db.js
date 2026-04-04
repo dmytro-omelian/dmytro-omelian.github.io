@@ -676,10 +676,20 @@ async function getReadingListEntries() {
       related_post_label,
       sort_order
     FROM reading_list_entries
-    ORDER BY year DESC, sort_order ASC, updated_at DESC, id ASC
+    ORDER BY year DESC, sort_order DESC, updated_at DESC, id ASC
   `);
 
   return result.rows.map(mapReadingListRow);
+}
+
+async function getNextReadingListSortOrder(year, db) {
+  const result = await db.query(`
+    SELECT COALESCE(MAX(sort_order), -1)::int AS max_sort_order
+    FROM reading_list_entries
+    WHERE year = $1
+  `, [year]);
+
+  return Number(result.rows[0]?.max_sort_order ?? -1) + 1;
 }
 
 async function buildUniqueReadingListSlug(title, excludeId, db = getPool()) {
@@ -793,7 +803,8 @@ async function createReadingListEntry(payload) {
   const year = normalizeRequiredInteger(payload.year, 'year', { min: 1 });
   const title = sanitizeRequiredTextWithLimit(payload.title, 'title', 200);
   const author = sanitizeRequiredTextWithLimit(payload.author, 'author', 200);
-  const sortOrder = normalizeRequiredInteger(payload.sortOrder, 'sortOrder');
+  const hasSortOrder = payload.sortOrder !== undefined && payload.sortOrder !== null && payload.sortOrder !== '';
+  const sortOrder = hasSortOrder ? normalizeRequiredInteger(payload.sortOrder, 'sortOrder') : null;
   const slug = sanitizeRequiredReadingListSlug(payload.slug, 'slug');
   const summaryMarkdown = sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 });
   const relatedPostSlug = sanitizeOptionalSlug(payload.relatedPostSlug, 'relatedPostSlug');
@@ -802,12 +813,14 @@ async function createReadingListEntry(payload) {
   const createdEntryId = await withTransaction(async (db) => {
     await assertReadingListSlugIsAvailable(slug, undefined, db);
 
+    const nextSortOrder = hasSortOrder ? sortOrder : await getNextReadingListSortOrder(year, db);
+
     const shiftedEntryIds = await listReadingListEntryIds(`
       SELECT id
       FROM reading_list_entries
       WHERE year = $1 AND sort_order >= $2
       ORDER BY sort_order ASC, id ASC
-    `, [year, sortOrder], db);
+    `, [year, nextSortOrder], db);
 
     await shiftReadingListEntryIds(year, shiftedEntryIds, 1, db);
 
@@ -824,7 +837,7 @@ async function createReadingListEntry(payload) {
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
-    `, [year, title, author, slug, summaryMarkdown, relatedPostSlug, relatedPostLabel, sortOrder]);
+    `, [year, title, author, slug, summaryMarkdown, relatedPostSlug, relatedPostLabel, nextSortOrder]);
 
     return Number(result.rows[0].id);
   });

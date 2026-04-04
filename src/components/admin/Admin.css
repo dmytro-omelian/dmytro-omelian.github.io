@@ -486,7 +486,9 @@
 
 .admin-preview-note p,
 .admin-preview-note ul,
-.admin-preview-note ol {
+.admin-preview-note ol,
+.admin-preview-note blockquote {
+  margin: 0 0 0.9rem;
   line-height: 1.65;
 }
 

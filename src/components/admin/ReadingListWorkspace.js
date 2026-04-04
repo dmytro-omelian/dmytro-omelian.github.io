@@ -168,7 +168,6 @@ function ReadingListWorkspace({
         title: trimmedTitle,
         author: trimmedAuthor,
         slug: trimmedSlug,
-        sortOrder: 0,
       });
 
       const nextBook = payload.book;

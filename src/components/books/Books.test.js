@@ -39,12 +39,12 @@ describe('Books', () => {
 
     const yearSections = container.querySelectorAll('.books-by-year');
     expect(within(yearSections[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'First by Author 3 blog post',
       'Second by Author 4',
+      'First by Author 3 blog post',
     ]);
     expect(within(yearSections[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Earlier book by Author 1',
       'Later book by Author 2',
+      'Earlier book by Author 1',
     ]);
   });
 

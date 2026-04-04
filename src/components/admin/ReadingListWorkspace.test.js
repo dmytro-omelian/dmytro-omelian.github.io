@@ -92,7 +92,6 @@ describe('ReadingListWorkspace', () => {
       title: 'Three',
       author: 'Author Three',
       slug: 'three',
-      sortOrder: 0,
     });
 
     await waitFor(() => expect(getAdminReadingList).toHaveBeenCalledTimes(2));
