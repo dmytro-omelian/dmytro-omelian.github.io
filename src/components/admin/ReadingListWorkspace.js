@@ -50,6 +50,25 @@ function formatBookMeta(book) {
   return parts.join(' · ');
 }
 
+function getNextSortOrder(books, year) {
+  const targetYear = Number(year);
+
+  if (!Number.isFinite(targetYear)) {
+    return 0;
+  }
+
+  const maxSortOrder = books.reduce((currentMax, book) => {
+    if (Number(book.year) !== targetYear) {
+      return currentMax;
+    }
+
+    const sortOrder = Number(book.sortOrder);
+    return Number.isFinite(sortOrder) ? Math.max(currentMax, sortOrder) : currentMax;
+  }, -1);
+
+  return maxSortOrder + 1;
+}
+
 function WorkspaceSwitch({ activeWorkspace, onWorkspaceChange }) {
   return (
     <div className="admin-workspace-switch" role="tablist" aria-label="Admin workspaces">
@@ -168,6 +187,7 @@ function ReadingListWorkspace({
         title: trimmedTitle,
         author: trimmedAuthor,
         slug: trimmedSlug,
+        sortOrder: getNextSortOrder(books, newBookDraft.year),
       });
 
       const nextBook = payload.book;
