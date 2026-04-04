@@ -2,7 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './BooksList.css';
 import { renderMarkdownToHtml } from '../../utils/markdown';
-import { getBookSummary, hasBookSummary } from './readingList';
+import {
+    getBookFinishedOn,
+    getBookScore,
+    getBookSummary,
+    hasBookSummary,
+} from './readingList';
 
 function getBookHash(slug) {
     return slug ? `#book-${encodeURIComponent(slug)}` : '';
@@ -25,10 +30,45 @@ function getBookFromHash(books) {
     return books.find((book) => book.slug === slug && hasBookSummary(book)) || null;
 }
 
+function formatBookFinishedDate(value) {
+    const dateMatch = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (!dateMatch) {
+        return null;
+    }
+
+    return `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}`;
+}
+
+function formatBookScore(value) {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    const numericScore = Number(value);
+
+    if (!Number.isFinite(numericScore)) {
+        return null;
+    }
+
+    const normalizedScore = numericScore % 1 === 0 ? `${numericScore.toFixed(0)}` : `${numericScore.toFixed(1)}`;
+    return `${normalizedScore}/5`;
+}
+
+function getHoverMetaLabel(book) {
+    const finishedOn = formatBookFinishedDate(getBookFinishedOn(book));
+    const score = formatBookScore(getBookScore(book));
+    const parts = [finishedOn, score].filter(Boolean);
+    return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function BookNoteModal({ book, onClose }) {
     const dialogTitleId = `book-note-title-${book.slug || book.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')}`;
+    const summaryMarkdown = getBookSummary(book);
+    const finishedOn = formatBookFinishedDate(getBookFinishedOn(book));
+    const score = formatBookScore(getBookScore(book));
 
     React.useEffect(() => {
         if (typeof document === 'undefined') return undefined;
@@ -77,6 +117,13 @@ function BookNoteModal({ book, onClose }) {
                             {book.title}
                         </h4>
                         <p className="book-note-author">by {book.author}</p>
+                        {(finishedOn || score) && (
+                            <p className="book-note-meta">
+                                {finishedOn ? `Finished: ${finishedOn}` : null}
+                                {finishedOn && score ? ' · ' : null}
+                                {score ? `Score: ${score}` : null}
+                            </p>
+                        )}
                     </div>
                     <button
                         type="button"
@@ -88,12 +135,16 @@ function BookNoteModal({ book, onClose }) {
                 </div>
 
                 <div className="book-note-content">
-                    <div
-                        className="book-note-body"
-                        dangerouslySetInnerHTML={{
-                            __html: renderMarkdownToHtml(getBookSummary(book)),
-                        }}
-                    />
+                    {summaryMarkdown ? (
+                        <div
+                            className="book-note-body"
+                            dangerouslySetInnerHTML={{
+                                __html: renderMarkdownToHtml(summaryMarkdown),
+                            }}
+                        />
+                    ) : (
+                        <p className="book-note-empty">No written note yet.</p>
+                    )}
                 </div>
             </article>
         </div>
@@ -148,43 +199,48 @@ function BooksYearSection({ year, books }) {
                 <h3>{year}</h3>
                 <ul>
                     {books
-                        .map((book, index) => (
-                            <li
-                                key={book.slug || `${book.title}-${index}`}
-                                id={book.slug ? `book-${book.slug}` : undefined}
-                            >
-                                {hasBookSummary(book) ? (
-                                    <button
-                                        type="button"
-                                        className="book-title book-title-button has-summary"
-                                        onClick={() => handleOpenSummary(book)}
-                                    >
-                                        {book.title}
-                                    </button>
-                                ) : book.relatedPostSlug ? (
-                                    <Link
-                                        to={`/blog/${book.relatedPostSlug}`}
-                                        className="book-title book-title-link"
-                                    >
-                                        {book.title}
-                                    </Link>
-                                ) : (
-                                    <span className="book-title">{book.title}</span>
-                                )}{' '}
-                                by {book.author}
-                                {book.relatedPostSlug && hasBookSummary(book) ? (
-                                    <>
-                                        {' '}
+                        .map((book, index) => {
+                            const hoverMetaLabel = getHoverMetaLabel(book);
+
+                            return (
+                                <li
+                                    key={book.slug || `${book.title}-${index}`}
+                                    id={book.slug ? `book-${book.slug}` : undefined}
+                                    data-book-meta={hoverMetaLabel || undefined}
+                                >
+                                    {hasBookSummary(book) ? (
+                                        <button
+                                            type="button"
+                                            className="book-title book-title-button has-summary"
+                                            onClick={() => handleOpenSummary(book)}
+                                        >
+                                            {book.title}
+                                        </button>
+                                    ) : book.relatedPostSlug ? (
                                         <Link
                                             to={`/blog/${book.relatedPostSlug}`}
-                                            className="book-related-link"
+                                            className="book-title book-title-link"
                                         >
-                                            {book.relatedPostLabel || 'blog post'}
+                                            {book.title}
                                         </Link>
-                                    </>
-                                ) : null}
-                            </li>
-                        ))}
+                                    ) : (
+                                        <span className="book-title">{book.title}</span>
+                                    )}{' '}
+                                    by {book.author}
+                                    {book.relatedPostSlug && hasBookSummary(book) ? (
+                                        <>
+                                            {' '}
+                                            <Link
+                                                to={`/blog/${book.relatedPostSlug}`}
+                                                className="book-related-link"
+                                            >
+                                                {book.relatedPostLabel || 'blog post'}
+                                            </Link>
+                                        </>
+                                    ) : null}
+                                </li>
+                            );
+                        })}
                 </ul>
             </div>
 

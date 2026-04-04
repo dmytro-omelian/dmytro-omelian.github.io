@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS reading_list_entries (
   summary_markdown TEXT,
   related_post_slug TEXT,
   related_post_label TEXT,
+  finished_on DATE,
+  score NUMERIC(2, 1) CHECK (score IS NULL OR (score >= 0 AND score <= 5)),
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

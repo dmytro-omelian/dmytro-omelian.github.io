@@ -54,3 +54,19 @@ export function getBookSummary(book) {
 export function hasBookSummary(book) {
   return Boolean(getBookSummary(book));
 }
+
+export function getBookFinishedOn(book) {
+  const value = String(book?.finishedOn || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+export function getBookScore(book) {
+  const rawScore = book?.score;
+
+  if (rawScore === undefined || rawScore === null || rawScore === '') {
+    return null;
+  }
+
+  const numericScore = Number(rawScore);
+  return Number.isFinite(numericScore) ? numericScore : null;
+}

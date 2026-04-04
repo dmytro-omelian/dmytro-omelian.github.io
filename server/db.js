@@ -259,13 +259,74 @@ function normalizeDateInput(value) {
   return normalizedValue;
 }
 
+function normalizeOptionalReadingListFinishedOn(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const normalizedValue = String(value).trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedValue)) {
+    throw createHttpError(400, 'finishedOn must use YYYY-MM-DD format.');
+  }
+
+  return normalizedValue;
+}
+
+function normalizeOptionalReadingListScore(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  let numericValue;
+
+  if (typeof value === 'number') {
+    numericValue = value;
+  } else {
+    const normalizedValue = String(value).trim();
+    const directMatch = normalizedValue.match(/^([0-9]+(?:[.,][0-9]+)?)$/);
+    const outOfFiveMatch = normalizedValue.match(/^([0-9]+(?:[.,][0-9]+)?)\s*\/\s*5(?:\.0+)?$/i);
+    const parsedValue = (outOfFiveMatch?.[1] || directMatch?.[1] || '').replace(',', '.');
+
+    numericValue = parsedValue ? Number(parsedValue) : Number.NaN;
+  }
+
+  if (!Number.isFinite(numericValue)) {
+    throw createHttpError(400, 'score must be a number between 0 and 5.');
+  }
+
+  const roundedScore = Math.round(numericValue * 10) / 10;
+
+  if (roundedScore < 0 || roundedScore > 5) {
+    throw createHttpError(400, 'score must be between 0 and 5.');
+  }
+
+  return roundedScore;
+}
+
+function normalizeStoredReadingListScore(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
 function formatDateValue(value) {
   if (!value) {
     return null;
   }
 
   if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
+    if (Number.isNaN(value.getTime())) {
+      return null;
+    }
+
+    const year = String(value.getFullYear()).padStart(4, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   const rawValue = String(value).trim();
@@ -391,6 +452,8 @@ function mapReadingListRow(row) {
     summaryMarkdown: normalizeOptionalStoredText(row.summary_markdown),
     relatedPostSlug: normalizeOptionalStoredText(row.related_post_slug),
     relatedPostLabel: normalizeOptionalStoredText(row.related_post_label),
+    finishedOn: formatDateValue(row.finished_on),
+    score: normalizeStoredReadingListScore(row.score),
     sortOrder: Number(row.sort_order),
   };
 }
@@ -431,9 +494,9 @@ async function seedReadingListEntries() {
   const params = [];
 
   legacyReadingListEntries.forEach((entry, index) => {
-    const baseIndex = index * 8;
+    const baseIndex = index * 10;
     values.push(
-      `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8})`,
+      `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8}, $${baseIndex + 9}, $${baseIndex + 10})`,
     );
     params.push(
       entry.year,
@@ -443,6 +506,8 @@ async function seedReadingListEntries() {
       entry.summaryMarkdown,
       entry.relatedPostSlug,
       entry.relatedPostLabel,
+      entry.finishedOn,
+      entry.score,
       entry.sortOrder,
     );
   });
@@ -456,6 +521,8 @@ async function seedReadingListEntries() {
       summary_markdown,
       related_post_slug,
       related_post_label,
+      finished_on,
+      score,
       sort_order
     )
     VALUES ${values.join(', ')}
@@ -478,6 +545,124 @@ async function backfillReadingListRelatedPosts() {
   ]);
 }
 
+async function ensureReadingListMetadataColumns() {
+  await query(`
+    ALTER TABLE reading_list_entries
+    ADD COLUMN IF NOT EXISTS finished_on DATE
+  `);
+
+  await query(`
+    ALTER TABLE reading_list_entries
+    ADD COLUMN IF NOT EXISTS score NUMERIC(2, 1)
+  `);
+}
+
+async function syncReadingListSeedMetadata() {
+  if (legacyReadingListEntries.length === 0) {
+    return;
+  }
+
+  await withTransaction(async (db) => {
+    for (const entry of legacyReadingListEntries) {
+      const year = normalizeRequiredInteger(entry.year, 'year', { min: 1 });
+      const title = sanitizeRequiredTextWithLimit(entry.title, 'title', 200);
+      const author = sanitizeRequiredTextWithLimit(entry.author, 'author', 200);
+      const slug = sanitizeRequiredReadingListSlug(entry.slug || entry.title, 'slug');
+      const summaryMarkdown = sanitizeOptionalText(entry.summaryMarkdown, { maxLength: 20000 });
+      const relatedPostSlug = sanitizeOptionalSlug(entry.relatedPostSlug, 'relatedPostSlug');
+      const relatedPostLabel = sanitizeOptionalText(entry.relatedPostLabel, { maxLength: 120 });
+      const finishedOn = normalizeOptionalReadingListFinishedOn(entry.finishedOn);
+      const score = normalizeOptionalReadingListScore(entry.score);
+
+      const existingResult = await db.query(`
+        SELECT
+          id,
+          summary_markdown,
+          related_post_slug,
+          related_post_label,
+          finished_on,
+          score
+        FROM reading_list_entries
+        WHERE slug = $1
+        LIMIT 1
+      `, [slug]);
+
+      if (existingResult.rowCount > 0) {
+        const existingEntry = existingResult.rows[0];
+        const existingSummary = normalizeOptionalStoredText(existingEntry.summary_markdown);
+        const existingRelatedPostSlug = normalizeOptionalStoredText(existingEntry.related_post_slug);
+        const existingRelatedPostLabel = normalizeOptionalStoredText(existingEntry.related_post_label);
+        const existingFinishedOn = formatDateValue(existingEntry.finished_on);
+        const existingScore = normalizeStoredReadingListScore(existingEntry.score);
+
+        const nextSummary = existingSummary || summaryMarkdown;
+        const nextRelatedPostSlug = existingRelatedPostSlug || relatedPostSlug;
+        const nextRelatedPostLabel = existingRelatedPostLabel || relatedPostLabel;
+        const nextFinishedOn = existingFinishedOn || finishedOn;
+        const nextScore = existingScore ?? score;
+
+        const shouldUpdate = nextSummary !== existingSummary
+          || nextRelatedPostSlug !== existingRelatedPostSlug
+          || nextRelatedPostLabel !== existingRelatedPostLabel
+          || nextFinishedOn !== existingFinishedOn
+          || nextScore !== existingScore;
+
+        if (shouldUpdate) {
+          await db.query(`
+            UPDATE reading_list_entries
+            SET
+              summary_markdown = $1,
+              related_post_slug = $2,
+              related_post_label = $3,
+              finished_on = $4,
+              score = $5,
+              updated_at = NOW()
+            WHERE id = $6
+          `, [
+            nextSummary,
+            nextRelatedPostSlug,
+            nextRelatedPostLabel,
+            nextFinishedOn,
+            nextScore,
+            Number(existingEntry.id),
+          ]);
+        }
+
+        continue;
+      }
+
+      const nextSortOrder = await getNextReadingListSortOrder(year, db);
+
+      await db.query(`
+        INSERT INTO reading_list_entries (
+          year,
+          title,
+          author,
+          slug,
+          summary_markdown,
+          related_post_slug,
+          related_post_label,
+          finished_on,
+          score,
+          sort_order
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        year,
+        title,
+        author,
+        slug,
+        summaryMarkdown,
+        relatedPostSlug,
+        relatedPostLabel,
+        finishedOn,
+        score,
+        nextSortOrder,
+      ]);
+    }
+  });
+}
+
 async function ensureDatabase() {
   if (initializationPromise) {
     return initializationPromise;
@@ -486,10 +671,12 @@ async function ensureDatabase() {
   initializationPromise = (async () => {
     const schemaSql = await fs.readFile(SCHEMA_FILE_PATH, 'utf8');
     await query(schemaSql);
+    await ensureReadingListMetadataColumns();
     await seedDefaultPostViews();
     await seedReadingListEntries();
     await backfillReadingListRelatedPosts();
     await backfillReadingListSlugs();
+    await syncReadingListSeedMetadata();
     await normalizeReadingListSortOrders();
     await ensureReadingListSortOrderUniqueIndex();
     await enforceReadingListSlugConstraint();
@@ -643,6 +830,8 @@ async function getReadingListEntryById(entryId) {
       summary_markdown,
       related_post_slug,
       related_post_label,
+      finished_on,
+      score,
       sort_order
     FROM reading_list_entries
     WHERE id = $1
@@ -667,6 +856,8 @@ async function getReadingListEntryByIdWithDb(entryId, db) {
       summary_markdown,
       related_post_slug,
       related_post_label,
+      finished_on,
+      score,
       sort_order
     FROM reading_list_entries
     WHERE id = $1
@@ -693,6 +884,8 @@ async function getReadingListEntries() {
       summary_markdown,
       related_post_slug,
       related_post_label,
+      finished_on,
+      score,
       sort_order
     FROM reading_list_entries
     ORDER BY year DESC, sort_order DESC, updated_at DESC, id ASC
@@ -854,6 +1047,8 @@ async function createReadingListEntry(payload) {
   const summaryMarkdown = sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 });
   const relatedPostSlug = sanitizeOptionalSlug(payload.relatedPostSlug, 'relatedPostSlug');
   const relatedPostLabel = sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 });
+  const finishedOn = normalizeOptionalReadingListFinishedOn(payload.finishedOn);
+  const score = normalizeOptionalReadingListScore(payload.score);
 
   const createdEntryId = await withTransaction(async (db) => {
     await assertReadingListSlugIsAvailable(slug, undefined, db);
@@ -878,11 +1073,24 @@ async function createReadingListEntry(payload) {
         summary_markdown,
         related_post_slug,
         related_post_label,
+        finished_on,
+        score,
         sort_order
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
-    `, [year, title, author, slug, summaryMarkdown, relatedPostSlug, relatedPostLabel, nextSortOrder]);
+    `, [
+      year,
+      title,
+      author,
+      slug,
+      summaryMarkdown,
+      relatedPostSlug,
+      relatedPostLabel,
+      finishedOn,
+      score,
+      nextSortOrder,
+    ]);
 
     return Number(result.rows[0].id);
   });
@@ -925,6 +1133,12 @@ async function updateReadingListEntry(entryId, payload) {
     const nextRelatedPostLabel = payload.relatedPostLabel !== undefined
       ? sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 })
       : existingEntry.relatedPostLabel;
+    const nextFinishedOn = payload.finishedOn !== undefined
+      ? normalizeOptionalReadingListFinishedOn(payload.finishedOn)
+      : existingEntry.finishedOn;
+    const nextScore = payload.score !== undefined
+      ? normalizeOptionalReadingListScore(payload.score)
+      : existingEntry.score;
 
     await assertReadingListSlugIsAvailable(nextSlug, entryId, db);
 
@@ -993,9 +1207,11 @@ async function updateReadingListEntry(entryId, payload) {
         summary_markdown = $5,
         related_post_slug = $6,
         related_post_label = $7,
-        sort_order = $8,
+        finished_on = $8,
+        score = $9,
+        sort_order = $10,
         updated_at = NOW()
-      WHERE id = $9
+      WHERE id = $11
     `, [
       nextYear,
       nextTitle,
@@ -1004,6 +1220,8 @@ async function updateReadingListEntry(entryId, payload) {
       nextSummaryMarkdown,
       nextRelatedPostSlug,
       nextRelatedPostLabel,
+      nextFinishedOn,
+      nextScore,
       nextSortOrder,
       entryId,
     ]);

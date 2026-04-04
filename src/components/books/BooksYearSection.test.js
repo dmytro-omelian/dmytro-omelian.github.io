@@ -58,6 +58,57 @@ describe('BooksYearSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Summary Only' }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(window.location.hash).toBe('');
+    expect(screen.queryByText(/Score:/i)).not.toBeInTheDocument();
+  });
+
+  test('renders score and finished date when they are available', async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <BooksYearSection
+          year="2026"
+          books={[
+            {
+              id: 1,
+              title: 'Rated Book',
+              author: 'Author',
+              slug: 'rated-book',
+              summaryMarkdown: 'A note',
+              score: 4.5,
+              finishedOn: '2026-04-04',
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rated Book' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Rated Book' });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText('Finished: 04/04/2026 · Score: 4.5/5')).toBeInTheDocument();
+  });
+
+  test('does not create a book-note trigger when only date and score exist', () => {
+    const { container } = render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <BooksYearSection
+          year="2026"
+          books={[
+            {
+              id: 1,
+              title: 'Meta Only',
+              author: 'Author',
+              slug: 'meta-only',
+              score: 3.5,
+              finishedOn: '2026-04-04',
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Meta Only' })).not.toBeInTheDocument();
+    expect(screen.getByText('Meta Only')).toBeInTheDocument();
+    expect(container.querySelector('#book-meta-only')?.getAttribute('data-book-meta')).toBe('04/04/2026 · 3.5/5');
   });
 
   test('opens a summary from an encoded hash for a unicode slug', async () => {
