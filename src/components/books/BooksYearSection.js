@@ -2,9 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './BooksList.css';
 import { renderMarkdownToHtml } from '../../utils/markdown';
+import { getBookSummary, hasBookSummary } from './readingList';
 
 function getBookHash(slug) {
-    return slug ? `#book-${slug}` : '';
+    return slug ? `#book-${encodeURIComponent(slug)}` : '';
 }
 
 function getBookFromHash(books) {
@@ -13,10 +14,15 @@ function getBookFromHash(books) {
     const { hash } = window.location;
     if (!hash || !hash.startsWith('#book-')) return null;
 
-    const slug = hash.replace('#book-', '');
+    let slug = hash.replace('#book-', '');
+    try {
+        slug = decodeURIComponent(slug);
+    } catch (error) {
+        return null;
+    }
     if (!slug) return null;
 
-    return books.find((book) => book.slug === slug && !!book.summary) || null;
+    return books.find((book) => book.slug === slug && hasBookSummary(book)) || null;
 }
 
 function BookNoteModal({ book, onClose }) {
@@ -85,7 +91,7 @@ function BookNoteModal({ book, onClose }) {
                     <div
                         className="book-note-body"
                         dangerouslySetInnerHTML={{
-                            __html: renderMarkdownToHtml(book.summary),
+                            __html: renderMarkdownToHtml(getBookSummary(book)),
                         }}
                     />
                 </div>
@@ -98,7 +104,7 @@ function BooksYearSection({ year, books }) {
     const [selectedBook, setSelectedBook] = React.useState(null);
 
     const handleOpenSummary = (book) => {
-        if (!book.summary) return;
+        if (!hasBookSummary(book)) return;
 
         setSelectedBook(book);
 
@@ -142,11 +148,9 @@ function BooksYearSection({ year, books }) {
                 <h3>{year}</h3>
                 <ul>
                     {books
-                        .slice()
-                        .reverse()
                         .map((book, index) => (
                             <li key={book.slug || `${book.title}-${index}`}>
-                                {book.summary ? (
+                                {hasBookSummary(book) ? (
                                     <button
                                         type="button"
                                         className="book-title book-title-button has-summary"

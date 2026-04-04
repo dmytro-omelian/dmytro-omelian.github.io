@@ -51,6 +51,11 @@ export async function getPublicQuestionLogs(questionId) {
   return requestJson(`/api/questions/${questionId}/logs`);
 }
 
+export async function getPublicReadingList() {
+  const payload = await requestJson('/api/reading-list');
+  return payload.books || [];
+}
+
 export async function getCommentCounts(postSlugs = []) {
   const normalizedPostSlugs = Array.isArray(postSlugs)
     ? postSlugs.map((postSlug) => String(postSlug || '').trim()).filter(Boolean)
@@ -91,6 +96,14 @@ export async function getAdminComments(adminKey, postSlug) {
   return payload.comments || [];
 }
 
+export async function getAdminReadingList(adminKey) {
+  const payload = await requestJson('/api/admin/reading-list', {
+    headers: createAdminHeaders(adminKey),
+  });
+
+  return payload.books || [];
+}
+
 export async function createAdminQuestion(adminKey, question) {
   return requestJson('/api/admin/questions', {
     method: 'POST',
@@ -99,11 +112,27 @@ export async function createAdminQuestion(adminKey, question) {
   });
 }
 
+export async function createAdminReadingListEntry(adminKey, book) {
+  return requestJson('/api/admin/reading-list', {
+    method: 'POST',
+    headers: createAdminHeaders(adminKey),
+    body: JSON.stringify(book),
+  });
+}
+
 export async function updateAdminQuestion(adminKey, questionId, question) {
   return requestJson(`/api/admin/questions/${questionId}`, {
     method: 'PATCH',
     headers: createAdminHeaders(adminKey),
     body: JSON.stringify(question),
+  });
+}
+
+export async function updateAdminReadingListEntry(adminKey, bookId, book) {
+  return requestJson(`/api/admin/reading-list/${bookId}`, {
+    method: 'PATCH',
+    headers: createAdminHeaders(adminKey),
+    body: JSON.stringify(book),
   });
 }
 
@@ -138,6 +167,13 @@ export async function deleteAdminQuestionLog(adminKey, logId) {
 
 export async function deleteAdminComment(adminKey, commentId) {
   return requestJson(`/api/admin/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: createAdminHeaders(adminKey),
+  });
+}
+
+export async function deleteAdminReadingListEntry(adminKey, bookId) {
+  return requestJson(`/api/admin/reading-list/${bookId}`, {
     method: 'DELETE',
     headers: createAdminHeaders(adminKey),
   });

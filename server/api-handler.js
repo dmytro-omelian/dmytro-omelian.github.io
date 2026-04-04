@@ -5,8 +5,10 @@ const {
   createHttpError,
   createQuestion,
   createQuestionLog,
+  createReadingListEntry,
   deleteBlogComment,
   deleteQuestionLog,
+  deleteReadingListEntry,
   ensureDatabase,
   getAdminBlogComments,
   getAdminQuestions,
@@ -17,9 +19,11 @@ const {
   getQuestionById,
   getQuestionLogs,
   getQuestions,
+  getReadingListEntries,
   incrementPostView,
   updateQuestion,
   updateQuestionLog,
+  updateReadingListEntry,
 } = require('./db');
 const { handleMcpRequest } = require('./mcp-handler');
 const { sendCommentNotification } = require('./resend');
@@ -272,6 +276,11 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
     return createJsonPayload(200, { questions });
   }
 
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/reading-list') {
+    const books = await getReadingListEntries();
+    return createJsonPayload(200, { books });
+  }
+
   const publicLogsMatch = requestUrl.pathname.match(/^\/api\/questions\/(\d+)\/logs$/);
 
   if (normalizedMethod === 'GET' && publicLogsMatch) {
@@ -310,10 +319,21 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
     return createJsonPayload(200, { comments });
   }
 
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/reading-list') {
+    const books = await getReadingListEntries();
+    return createJsonPayload(200, { books });
+  }
+
   if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/questions') {
     const payload = await readJsonBody();
     const question = await queueWrite(() => createQuestion(payload));
     return createJsonPayload(201, { question });
+  }
+
+  if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/reading-list') {
+    const payload = await readJsonBody();
+    const book = await queueWrite(() => createReadingListEntry(payload));
+    return createJsonPayload(201, { book });
   }
 
   const adminQuestionMatch = requestUrl.pathname.match(/^\/api\/admin\/questions\/(\d+)$/);
@@ -404,6 +424,37 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
 
     if (normalizedMethod === 'DELETE') {
       const deleted = await queueWrite(() => deleteBlogComment(commentId));
+
+      if (!deleted) {
+        return createJsonPayload(404, { error: 'Not found' });
+      }
+
+      return createJsonPayload(200, { deleted: true });
+    }
+  }
+
+  const adminReadingListMatch = requestUrl.pathname.match(/^\/api\/admin\/reading-list\/(\d+)$/);
+
+  if (adminReadingListMatch) {
+    const entryId = getNumericId(adminReadingListMatch[1]);
+
+    if (!entryId) {
+      return createJsonPayload(400, { error: 'Book id is invalid.' });
+    }
+
+    if (normalizedMethod === 'PATCH') {
+      const payload = await readJsonBody();
+      const book = await queueWrite(() => updateReadingListEntry(entryId, payload));
+
+      if (!book) {
+        return createJsonPayload(404, { error: 'Not found' });
+      }
+
+      return createJsonPayload(200, { book });
+    }
+
+    if (normalizedMethod === 'DELETE') {
+      const deleted = await queueWrite(() => deleteReadingListEntry(entryId));
 
       if (!deleted) {
         return createJsonPayload(404, { error: 'Not found' });

@@ -61,3 +61,27 @@ CREATE TABLE IF NOT EXISTS open_question_logs (
 
 CREATE INDEX IF NOT EXISTS open_question_logs_question_logged_idx
   ON open_question_logs (question_id, logged_at DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS reading_list_entries (
+  id BIGSERIAL PRIMARY KEY,
+  year INTEGER NOT NULL CHECK (year > 0),
+  title TEXT NOT NULL,
+  author TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  summary_markdown TEXT,
+  related_post_slug TEXT,
+  related_post_label TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS reading_list_entries_slug_unique_idx
+  ON reading_list_entries (slug)
+  WHERE slug IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS reading_list_entries_year_sort_unique_idx
+  ON reading_list_entries (year, sort_order);
+
+CREATE INDEX IF NOT EXISTS reading_list_entries_year_sort_idx
+  ON reading_list_entries (year DESC, sort_order ASC, updated_at DESC, id ASC);

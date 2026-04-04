@@ -31,6 +31,15 @@
   margin-top: 5%;
 }
 
+.books-feedback {
+  margin: 18px 0;
+  color: #333333;
+}
+
+.books-feedback-error {
+  color: #b42318;
+}
+
 .book-title {
   cursor: default;
 }

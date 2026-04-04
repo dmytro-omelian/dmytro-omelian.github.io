@@ -4,6 +4,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { Pool } = require('pg');
 const seedViews = require('../src/data/postViewsSeed.json');
+const { legacyReadingListEntries } = require('./reading-list-seed');
 
 const SCHEMA_FILE_PATH = path.join(process.cwd(), 'server', 'schema.sql');
 
@@ -68,6 +69,27 @@ async function query(text, params = []) {
   return getPool().query(text, params);
 }
 
+async function withTransaction(task) {
+  const client = await getPool().connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await task(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      // Ignore rollback failures and surface the original error.
+    }
+
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function closePool() {
   if (!pool) {
     return;
@@ -118,6 +140,33 @@ function sanitizeRequiredTextWithLimit(value, fieldName, maxLength) {
 
 function sanitizeSlug(value, fieldName = 'slug') {
   return sanitizeRequiredTextWithLimit(value, fieldName, 160);
+}
+
+function sanitizeOptionalSlug(value, fieldName = 'slug') {
+  const normalizedValue = sanitizeOptionalText(value, { maxLength: 160 });
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const normalizedSlug = slugify(normalizedValue);
+
+  if (!normalizedSlug) {
+    throw createHttpError(400, `${fieldName} is invalid.`);
+  }
+
+  return normalizedSlug;
+}
+
+function sanitizeRequiredReadingListSlug(value, fieldName = 'slug') {
+  const normalizedValue = sanitizeRequiredTextWithLimit(value, fieldName, 160);
+  const normalizedSlug = slugifyReadingListValue(normalizedValue);
+
+  if (!normalizedSlug) {
+    throw createHttpError(400, `${fieldName} must include letters or numbers.`);
+  }
+
+  return normalizedSlug;
 }
 
 function sanitizeOptionalEmail(value) {
@@ -178,6 +227,28 @@ function normalizeSortOrder(value, fallback = 0) {
   return Math.trunc(numericValue);
 }
 
+function normalizeRequiredInteger(value, fieldName, { min, max } = {}) {
+  if (value === undefined || value === null || value === '') {
+    throw createHttpError(400, `${fieldName} is required.`);
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isInteger(numericValue)) {
+    throw createHttpError(400, `${fieldName} must be an integer.`);
+  }
+
+  if (min !== undefined && numericValue < min) {
+    throw createHttpError(400, `${fieldName} must be at least ${min}.`);
+  }
+
+  if (max !== undefined && numericValue > max) {
+    throw createHttpError(400, `${fieldName} must be at most ${max}.`);
+  }
+
+  return numericValue;
+}
+
 function normalizeDateInput(value) {
   const normalizedValue = String(value ?? '').trim();
 
@@ -229,6 +300,17 @@ function slugify(input) {
     .replace(/-+/g, '-');
 
   return normalizedValue || `question-${Date.now()}`;
+}
+
+function slugifyReadingListValue(input) {
+  return String(input ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}\s-]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 async function questionSlugExists(slug, excludeId) {
@@ -299,6 +381,20 @@ function mapBlogCommentRow(row, { includeAdminFields = false } = {}) {
   };
 }
 
+function mapReadingListRow(row) {
+  return {
+    id: Number(row.id),
+    year: Number(row.year),
+    title: row.title,
+    author: row.author,
+    slug: normalizeOptionalStoredText(row.slug),
+    summaryMarkdown: normalizeOptionalStoredText(row.summary_markdown),
+    relatedPostSlug: normalizeOptionalStoredText(row.related_post_slug),
+    relatedPostLabel: normalizeOptionalStoredText(row.related_post_label),
+    sortOrder: Number(row.sort_order),
+  };
+}
+
 async function seedDefaultPostViews() {
   const normalizedSeedViews = normalizeViews(seedViews);
   const entries = Object.entries(normalizedSeedViews);
@@ -323,6 +419,49 @@ async function seedDefaultPostViews() {
   `, params);
 }
 
+async function seedReadingListEntries() {
+  const existingCountResult = await query('SELECT COUNT(*)::int AS count FROM reading_list_entries');
+  const existingCount = Number(existingCountResult.rows[0]?.count || 0);
+
+  if (existingCount > 0 || legacyReadingListEntries.length === 0) {
+    return;
+  }
+
+  const values = [];
+  const params = [];
+
+  legacyReadingListEntries.forEach((entry, index) => {
+    const baseIndex = index * 8;
+    values.push(
+      `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8})`,
+    );
+    params.push(
+      entry.year,
+      entry.title,
+      entry.author,
+      entry.slug,
+      entry.summaryMarkdown,
+      entry.relatedPostSlug,
+      entry.relatedPostLabel,
+      entry.sortOrder,
+    );
+  });
+
+  await query(`
+    INSERT INTO reading_list_entries (
+      year,
+      title,
+      author,
+      slug,
+      summary_markdown,
+      related_post_slug,
+      related_post_label,
+      sort_order
+    )
+    VALUES ${values.join(', ')}
+  `, params);
+}
+
 async function ensureDatabase() {
   if (initializationPromise) {
     return initializationPromise;
@@ -332,6 +471,9 @@ async function ensureDatabase() {
     const schemaSql = await fs.readFile(SCHEMA_FILE_PATH, 'utf8');
     await query(schemaSql);
     await seedDefaultPostViews();
+    await seedReadingListEntries();
+    await backfillReadingListSlugs();
+    await enforceReadingListSlugConstraint();
   })().catch((error) => {
     initializationPromise = null;
     throw error;
@@ -467,6 +609,367 @@ async function incrementPostView(slug) {
   `, [normalizedSlug]);
 
   return Number(result.rows[0]?.views || 0);
+}
+
+async function getReadingListEntryById(entryId) {
+  await ensureDatabase();
+
+  const result = await query(`
+    SELECT
+      id,
+      year,
+      title,
+      author,
+      slug,
+      summary_markdown,
+      related_post_slug,
+      related_post_label,
+      sort_order
+    FROM reading_list_entries
+    WHERE id = $1
+    LIMIT 1
+  `, [entryId]);
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return mapReadingListRow(result.rows[0]);
+}
+
+async function getReadingListEntryByIdWithDb(entryId, db) {
+  const result = await db.query(`
+    SELECT
+      id,
+      year,
+      title,
+      author,
+      slug,
+      summary_markdown,
+      related_post_slug,
+      related_post_label,
+      sort_order
+    FROM reading_list_entries
+    WHERE id = $1
+    LIMIT 1
+  `, [entryId]);
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return mapReadingListRow(result.rows[0]);
+}
+
+async function getReadingListEntries() {
+  await ensureDatabase();
+
+  const result = await query(`
+    SELECT
+      id,
+      year,
+      title,
+      author,
+      slug,
+      summary_markdown,
+      related_post_slug,
+      related_post_label,
+      sort_order
+    FROM reading_list_entries
+    ORDER BY year DESC, sort_order ASC, updated_at DESC, id ASC
+  `);
+
+  return result.rows.map(mapReadingListRow);
+}
+
+async function buildUniqueReadingListSlug(title, excludeId, db = getPool()) {
+  const baseSlug = slugifyReadingListValue(title) || 'book';
+  let candidateSlug = baseSlug;
+  let suffix = 2;
+
+  while (await readingListSlugExists(candidateSlug, excludeId, db)) {
+    candidateSlug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidateSlug;
+}
+
+async function readingListSlugExists(slug, excludeId, db = getPool()) {
+  const params = [slug];
+  let queryText = 'SELECT 1 FROM reading_list_entries WHERE slug = $1';
+
+  if (excludeId) {
+    params.push(excludeId);
+    queryText += ' AND id <> $2';
+  }
+
+  const result = await db.query(queryText, params);
+  return result.rowCount > 0;
+}
+
+async function assertReadingListSlugIsAvailable(slug, excludeId, db = getPool()) {
+  if (!slug) {
+    return;
+  }
+
+  if (await readingListSlugExists(slug, excludeId, db)) {
+    throw createHttpError(400, 'slug is already in use.');
+  }
+}
+
+async function getReadingListSortOffset(year, db) {
+  const result = await db.query(`
+    SELECT COALESCE(MAX(ABS(sort_order)), 0)::int AS max_abs_sort_order
+    FROM reading_list_entries
+    WHERE year = $1
+  `, [year]);
+
+  return Number(result.rows[0]?.max_abs_sort_order || 0) + 1000;
+}
+
+async function getReadingListTemporarySortOrder(year, entryId, db) {
+  const offset = await getReadingListSortOffset(year, db);
+  return -(offset + Number(entryId || 0));
+}
+
+async function listReadingListEntryIds(queryText, params, db) {
+  const result = await db.query(queryText, params);
+  return result.rows.map((row) => Number(row.id));
+}
+
+async function shiftReadingListEntryIds(year, entryIds, delta, db) {
+  if (!Array.isArray(entryIds) || entryIds.length === 0) {
+    return;
+  }
+
+  const offset = await getReadingListSortOffset(year, db);
+
+  await db.query(`
+    UPDATE reading_list_entries
+    SET sort_order = sort_order + $1, updated_at = NOW()
+    WHERE id = ANY($2::bigint[])
+  `, [offset, entryIds]);
+
+  await db.query(`
+    UPDATE reading_list_entries
+    SET sort_order = sort_order - $1 + $2, updated_at = NOW()
+    WHERE id = ANY($3::bigint[])
+  `, [offset, delta, entryIds]);
+}
+
+async function backfillReadingListSlugs() {
+  await withTransaction(async (db) => {
+    const result = await db.query(`
+      SELECT id, title
+      FROM reading_list_entries
+      WHERE slug IS NULL OR BTRIM(slug) = ''
+      ORDER BY id ASC
+    `);
+
+    for (const row of result.rows) {
+      const entryId = Number(row.id);
+      const slug = await buildUniqueReadingListSlug(row.title, entryId, db);
+
+      await db.query(`
+        UPDATE reading_list_entries
+        SET slug = $1, updated_at = NOW()
+        WHERE id = $2
+      `, [slug, entryId]);
+    }
+  });
+}
+
+async function enforceReadingListSlugConstraint() {
+  await query(`
+    ALTER TABLE reading_list_entries
+    ALTER COLUMN slug SET NOT NULL
+  `);
+}
+
+async function createReadingListEntry(payload) {
+  await ensureDatabase();
+
+  const year = normalizeRequiredInteger(payload.year, 'year', { min: 1 });
+  const title = sanitizeRequiredTextWithLimit(payload.title, 'title', 200);
+  const author = sanitizeRequiredTextWithLimit(payload.author, 'author', 200);
+  const sortOrder = normalizeRequiredInteger(payload.sortOrder, 'sortOrder');
+  const slug = sanitizeRequiredReadingListSlug(payload.slug, 'slug');
+  const summaryMarkdown = sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 });
+  const relatedPostSlug = sanitizeOptionalSlug(payload.relatedPostSlug, 'relatedPostSlug');
+  const relatedPostLabel = sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 });
+
+  const createdEntryId = await withTransaction(async (db) => {
+    await assertReadingListSlugIsAvailable(slug, undefined, db);
+
+    const shiftedEntryIds = await listReadingListEntryIds(`
+      SELECT id
+      FROM reading_list_entries
+      WHERE year = $1 AND sort_order >= $2
+      ORDER BY sort_order ASC, id ASC
+    `, [year, sortOrder], db);
+
+    await shiftReadingListEntryIds(year, shiftedEntryIds, 1, db);
+
+    const result = await db.query(`
+      INSERT INTO reading_list_entries (
+        year,
+        title,
+        author,
+        slug,
+        summary_markdown,
+        related_post_slug,
+        related_post_label,
+        sort_order
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `, [year, title, author, slug, summaryMarkdown, relatedPostSlug, relatedPostLabel, sortOrder]);
+
+    return Number(result.rows[0].id);
+  });
+
+  return getReadingListEntryById(createdEntryId);
+}
+
+async function updateReadingListEntry(entryId, payload) {
+  await ensureDatabase();
+
+  const updatedEntryId = await withTransaction(async (db) => {
+    const existingEntry = await getReadingListEntryByIdWithDb(entryId, db);
+
+    if (!existingEntry) {
+      return null;
+    }
+
+    const nextYear = payload.year !== undefined
+      ? normalizeRequiredInteger(payload.year, 'year', { min: 1 })
+      : existingEntry.year;
+    const nextTitle = payload.title !== undefined
+      ? sanitizeRequiredTextWithLimit(payload.title, 'title', 200)
+      : existingEntry.title;
+    const nextAuthor = payload.author !== undefined
+      ? sanitizeRequiredTextWithLimit(payload.author, 'author', 200)
+      : existingEntry.author;
+    const nextSortOrder = payload.sortOrder !== undefined
+      ? normalizeRequiredInteger(payload.sortOrder, 'sortOrder')
+      : existingEntry.sortOrder;
+    const nextSlug = sanitizeRequiredReadingListSlug(
+      payload.slug !== undefined ? payload.slug : existingEntry.slug,
+      'slug',
+    );
+    const nextSummaryMarkdown = payload.summaryMarkdown !== undefined
+      ? sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 })
+      : existingEntry.summaryMarkdown;
+    const nextRelatedPostSlug = payload.relatedPostSlug !== undefined
+      ? sanitizeOptionalSlug(payload.relatedPostSlug, 'relatedPostSlug')
+      : existingEntry.relatedPostSlug;
+    const nextRelatedPostLabel = payload.relatedPostLabel !== undefined
+      ? sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 })
+      : existingEntry.relatedPostLabel;
+
+    await assertReadingListSlugIsAvailable(nextSlug, entryId, db);
+
+    if (nextYear !== existingEntry.year || nextSortOrder !== existingEntry.sortOrder) {
+      const temporarySortOrder = await getReadingListTemporarySortOrder(existingEntry.year, entryId, db);
+
+      await db.query(`
+        UPDATE reading_list_entries
+        SET sort_order = $1, updated_at = NOW()
+        WHERE id = $2
+      `, [temporarySortOrder, entryId]);
+
+      if (nextYear === existingEntry.year) {
+        if (nextSortOrder < existingEntry.sortOrder) {
+          const shiftedEntryIds = await listReadingListEntryIds(`
+            SELECT id
+            FROM reading_list_entries
+            WHERE year = $1
+              AND sort_order >= $2
+              AND sort_order < $3
+            ORDER BY sort_order ASC, id ASC
+          `, [nextYear, nextSortOrder, existingEntry.sortOrder], db);
+
+          await shiftReadingListEntryIds(nextYear, shiftedEntryIds, 1, db);
+        } else if (nextSortOrder > existingEntry.sortOrder) {
+          const shiftedEntryIds = await listReadingListEntryIds(`
+            SELECT id
+            FROM reading_list_entries
+            WHERE year = $1
+              AND sort_order <= $2
+              AND sort_order > $3
+            ORDER BY sort_order ASC, id ASC
+          `, [nextYear, nextSortOrder, existingEntry.sortOrder], db);
+
+          await shiftReadingListEntryIds(nextYear, shiftedEntryIds, -1, db);
+        }
+      } else {
+        const oldYearShiftedEntryIds = await listReadingListEntryIds(`
+          SELECT id
+          FROM reading_list_entries
+          WHERE year = $1
+            AND sort_order > $2
+          ORDER BY sort_order ASC, id ASC
+        `, [existingEntry.year, existingEntry.sortOrder], db);
+
+        const newYearShiftedEntryIds = await listReadingListEntryIds(`
+          SELECT id
+          FROM reading_list_entries
+          WHERE year = $1
+            AND sort_order >= $2
+          ORDER BY sort_order ASC, id ASC
+        `, [nextYear, nextSortOrder], db);
+
+        await shiftReadingListEntryIds(existingEntry.year, oldYearShiftedEntryIds, -1, db);
+        await shiftReadingListEntryIds(nextYear, newYearShiftedEntryIds, 1, db);
+      }
+    }
+
+    await db.query(`
+      UPDATE reading_list_entries
+      SET
+        year = $1,
+        title = $2,
+        author = $3,
+        slug = $4,
+        summary_markdown = $5,
+        related_post_slug = $6,
+        related_post_label = $7,
+        sort_order = $8,
+        updated_at = NOW()
+      WHERE id = $9
+    `, [
+      nextYear,
+      nextTitle,
+      nextAuthor,
+      nextSlug,
+      nextSummaryMarkdown,
+      nextRelatedPostSlug,
+      nextRelatedPostLabel,
+      nextSortOrder,
+      entryId,
+    ]);
+
+    return entryId;
+  });
+
+  if (!updatedEntryId) {
+    return null;
+  }
+
+  return getReadingListEntryById(updatedEntryId);
+}
+
+async function deleteReadingListEntry(entryId) {
+  await ensureDatabase();
+
+  const result = await query(`
+    DELETE FROM reading_list_entries
+    WHERE id = $1
+    RETURNING id
+  `, [entryId]);
+
+  return result.rowCount > 0;
 }
 
 async function getQuestionById(
@@ -733,8 +1236,10 @@ module.exports = {
   createHttpError,
   createQuestion,
   createQuestionLog,
+  createReadingListEntry,
   deleteBlogComment,
   deleteQuestionLog,
+  deleteReadingListEntry,
   ensureDatabase,
   getAdminBlogComments,
   getAdminQuestions,
@@ -746,7 +1251,9 @@ module.exports = {
   getQuestionBySlug,
   getQuestionLogs,
   getQuestions,
+  getReadingListEntries,
   incrementPostView,
   updateQuestion,
   updateQuestionLog,
+  updateReadingListEntry,
 };

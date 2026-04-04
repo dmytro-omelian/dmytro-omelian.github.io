@@ -204,6 +204,30 @@
   gap: 16px;
 }
 
+.admin-workspace-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 4px;
+  border: 1px solid #e3e3e3;
+  background: #f8f8f8;
+}
+
+.admin-workspace-switch-button {
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  font: inherit;
+  color: #555555;
+  cursor: pointer;
+}
+
+.admin-workspace-switch-button.is-active {
+  background: #111111;
+  color: #ffffff;
+}
+
 .admin-sidebar-panel-title {
   margin: 0;
   font-weight: 400;
@@ -222,6 +246,15 @@
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.admin-inline-fields-stacked {
+  align-items: stretch;
+}
+
+.admin-field-grid {
+  display: grid;
+  gap: 12px;
 }
 
 .admin-empty-state,
@@ -283,6 +316,30 @@
   gap: 16px;
 }
 
+.admin-sidebar-list {
+  margin-top: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.admin-reading-year-group {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-reading-year-heading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #777777;
+}
+
+.admin-question-list-compact {
+  margin-top: 0;
+}
+
 .admin-log-item {
   display: grid;
   gap: 14px;
@@ -316,6 +373,21 @@
 .admin-note-preview-pane {
   display: grid;
   gap: 12px;
+}
+
+.admin-book-preview-card {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-book-preview-title {
+  margin: 0;
+  font-weight: 400;
+}
+
+.admin-book-preview-author {
+  margin: 0;
+  color: #555555;
 }
 
 .admin-image-insert {

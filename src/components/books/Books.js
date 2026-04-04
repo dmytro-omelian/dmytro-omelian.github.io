@@ -1,24 +1,64 @@
-import BooksList2026 from './BooksList2026';
-import BooksList2025 from './BooksList2025';
-import BooksList2024 from './BooksList2024';
-import BooksList2023 from './BooksList2023';
-import BooksList2022 from './BooksList2022';
+import React, { useEffect, useMemo, useState } from 'react';
+import { getPublicReadingList } from '../../api/siteData';
+import BooksYearSection from './BooksYearSection';
+import { groupBooksByYear } from './readingList';
 
 import './BooksList.css';
 
 function Books() {
-    return (
-        // <div className="markdown-container" dangerouslySetInnerHTML={{ __html: markdown }} />
-        <div className="books-list-container">
-            <h2 className='books-container-title'>An incomplete list of books that I've been reading lately...</h2>
+  const [books, setBooks] = useState([]);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(true);
+  const [booksError, setBooksError] = useState('');
+  const booksByYear = useMemo(() => groupBooksByYear(books), [books]);
 
-            <BooksList2026 />
-            <BooksList2025 />
-            <BooksList2024 />
-            <BooksList2023 />
-            <BooksList2022 />
-        </div>
-    );
+  useEffect(() => {
+    let isActive = true;
+
+    setIsLoadingBooks(true);
+    setBooksError('');
+
+    getPublicReadingList()
+      .then((nextBooks) => {
+        if (!isActive) {
+          return;
+        }
+
+        setBooks(nextBooks);
+      })
+      .catch((error) => {
+        if (!isActive) {
+          return;
+        }
+
+        setBooksError(error.message || 'Failed to load reading list.');
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingBooks(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  return (
+    <div className="books-list-container">
+      <h2 className="books-container-title">An incomplete list of books that I&apos;ve been reading lately...</h2>
+
+      {isLoadingBooks && <p className="books-feedback">Loading reading list...</p>}
+      {!isLoadingBooks && booksError && <p className="books-feedback books-feedback-error">{booksError}</p>}
+
+      {!isLoadingBooks && !booksError && booksByYear.map(({ year, books: yearBooks }) => (
+        <BooksYearSection key={year} year={String(year)} books={yearBooks} />
+      ))}
+
+      {!isLoadingBooks && !booksError && booksByYear.length === 0 && (
+        <p className="books-feedback">Nothing here yet.</p>
+      )}
+    </div>
+  );
 }
 
 export default Books;
