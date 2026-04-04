@@ -462,6 +462,22 @@ async function seedReadingListEntries() {
   `, params);
 }
 
+async function backfillReadingListRelatedPosts() {
+  await query(`
+    UPDATE reading_list_entries
+    SET related_post_slug = $1,
+        related_post_label = COALESCE(related_post_label, $2)
+    WHERE related_post_slug IS NULL
+      AND lower(author) = $3
+      AND lower(title) = ANY($4::text[])
+  `, [
+    '1984-book-note',
+    'blog post',
+    'george orwell',
+    ['1984', '1984 (ukr)'],
+  ]);
+}
+
 async function ensureDatabase() {
   if (initializationPromise) {
     return initializationPromise;
@@ -472,6 +488,7 @@ async function ensureDatabase() {
     await query(schemaSql);
     await seedDefaultPostViews();
     await seedReadingListEntries();
+    await backfillReadingListRelatedPosts();
     await backfillReadingListSlugs();
     await normalizeReadingListSortOrders();
     await ensureReadingListSortOrderUniqueIndex();

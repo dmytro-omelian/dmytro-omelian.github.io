@@ -66,6 +66,20 @@
   color: #14532d;
 }
 
+.book-title-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: #14532d;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  color: inherit;
+}
+
+.book-title-link:hover,
+.book-title-link:focus-visible {
+  color: #14532d;
+}
+
 .book-title-button:focus-visible,
 .book-note-close:focus-visible {
   outline: 2px solid #14532d;

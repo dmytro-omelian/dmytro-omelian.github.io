@@ -64,6 +64,56 @@ const posts = [
                 ],
             },
         ],
+        englishContent: [
+            "My first dystopian novel and a pleasant introduction to the genre.",
+            "For some reason at the start I thought the book would be positive because I own a pink English edition with a boy on the cover (I read the Ukrainian edition from KSD).",
+            { type: "heading", text: "Spoilers ahead" },
+            {
+                type: "image",
+                src: "/images/books/1984-cover-eng.jpeg",
+                alt: "1984, English edition with a pink cover",
+                caption: "My English copy of 1984 — the pink cover that initially felt strangely optimistic.",
+            },
+            "But once I started reading and understanding what it is about, I noticed dozens of details on that pink cover that I had missed before (hands, inscriptions, the diary, its condition, etc.).",
+            "Everything clicked for me after about 50 pages.",
+            "People’s behavior, the Party, the telescreens watching you, Goldstein… it all feels painfully familiar and easy to draw parallels with. At times you can’t believe people could behave like this.",
+            "I think it is a great book for 10–11 grade or the university period. I loved it.",
+            "I already had some formed views and beliefs that align with what happens in the book, but there was a lot that felt new.",
+            "Julia + Winston Smith — it’s interesting that the book is also about love. I started empathizing with Winston — I felt sad for him.",
+            "The rat scene was terrifying… And O’Brien’s betrayal is one of the most devastating moments in the book. You trust him together with Winston, and you get broken together with him.",
+            "Truth manipulation, torture, NEWSPEAK, 2+2, the ministry names, and that strange sense of parallelism with the modern world (and of course with the USSR + Nazi Germany).",
+            { type: "heading", text: "Newspeak as the biggest punch" },
+            "Newspeak is probably the idea that stuck with me the most. Language doesn’t just describe thoughts — it shapes and limits them.",
+            "If a language doesn’t have a word for “freedom,” can you even think about it?",
+            "And with this AI era, you remember again that language = control, both in 1984 and now.",
+            { type: "heading", text: "Four sales spikes in the last 20 years" },
+            {
+                type: "image",
+                src: "/images/books/1984-sales-spikes.png",
+                alt: "Chart of 1984 sales spikes",
+                caption: "Sales spikes for 1984 and the events that coincided with them.",
+            },
+            {
+                type: "list",
+                items: [
+                    "2013 — linked to Snowden and the NSA mass-surveillance leak. Amazon sales jumped 6000%+ in 24 hours.",
+                    "2017 — after Trump’s election and Kellyanne Conway’s “alternative facts” comment. Sales rose 9500%, Penguin reprinted 500,000 copies in a week (DOUBLETHINK + truth manipulation).",
+                    "2021 — Jan 6 Capitol attack + the book entered the public domain in most countries (except the US, where copyright lasts until 2045). Dozens of new editions appeared.",
+                    "2025 — another Trump inauguration.",
+                ],
+            },
+            { type: "heading", text: "A few facts about the book" },
+            {
+                type: "list",
+                items: [
+                    "There’s a theory that the title comes from the “reversed” year of writing (1948), but it’s not certain — in drafts Orwell first wrote 1980, then 1982, and only later 1984.",
+                    "It was Orwell’s 9th and last book published in his lifetime.",
+                    "He was inspired by Yevgeny Zamyatin’s dystopian novel We (1924) — Orwell read it around 1946 and even wrote a review.",
+                    "In 1984 the book topped the US bestseller list.",
+                    "Over 30 million copies sold worldwide.",
+                ],
+            },
+        ],
     },
     {
         id: 7,
@@ -343,6 +393,34 @@ function PostMeta({ date, viewCount, commentCount, discussionHref, selected = fa
     );
 }
 
+function renderBacklink(link, index) {
+    if (!link?.href || !link?.label) {
+        return null;
+    }
+
+    const isInternal = link.href.startsWith('/');
+
+    if (isInternal) {
+        return (
+            <Link key={`${link.href}-${index}`} to={link.href} className="post-backlink">
+                {link.label}
+            </Link>
+        );
+    }
+
+    return (
+        <a
+            key={`${link.href}-${index}`}
+            href={link.href}
+            className="post-backlink"
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            {link.label}
+        </a>
+    );
+}
+
 function renderContentBlock(block, index) {
     if (typeof block === 'string') {
         return <p key={index}>{block}</p>;
@@ -479,6 +557,12 @@ export function PostDetail() {
     const item = posts.find(entry => entry.slug === slug);
     const [viewCount, setViewCount] = useState();
     const [commentCount, setCommentCount] = useState();
+    const [showEnglish, setShowEnglish] = useState(false);
+    const hasEnglish = Boolean(item?.englishContent?.length);
+    const contentToRender = showEnglish && hasEnglish ? item.englishContent : item.content;
+    const backlinks = Array.isArray(item?.backlinks)
+        ? item.backlinks.filter((link) => link?.href && link?.label)
+        : [];
 
     useEffect(() => {
         let isActive = true;
@@ -513,6 +597,10 @@ export function PostDetail() {
         };
     }, [item, slug]);
 
+    useEffect(() => {
+        setShowEnglish(false);
+    }, [slug]);
+
     if (!item) {
         return (
             <div className='posts-container'>
@@ -535,7 +623,21 @@ export function PostDetail() {
                     discussionHref="#discussion"
                     selected
                 />
-                {item.content.map(renderContentBlock)}
+                {backlinks.length > 0 && (
+                    <div className="post-backlinks">
+                        {backlinks.map(renderBacklink)}
+                    </div>
+                )}
+                {hasEnglish && (
+                    <button
+                        type="button"
+                        className="post-language-toggle"
+                        onClick={() => setShowEnglish((current) => !current)}
+                    >
+                        {showEnglish ? 'Show in Ukrainian' : 'Show in English'}
+                    </button>
+                )}
+                {contentToRender.map(renderContentBlock)}
                 <div className="newsletter-section">
                     <p className="newsletter-copy">
                         Essays, experiments, and updates from what I&apos;m building and learning.

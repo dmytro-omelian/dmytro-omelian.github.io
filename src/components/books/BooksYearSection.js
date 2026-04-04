@@ -149,7 +149,10 @@ function BooksYearSection({ year, books }) {
                 <ul>
                     {books
                         .map((book, index) => (
-                            <li key={book.slug || `${book.title}-${index}`}>
+                            <li
+                                key={book.slug || `${book.title}-${index}`}
+                                id={book.slug ? `book-${book.slug}` : undefined}
+                            >
                                 {hasBookSummary(book) ? (
                                     <button
                                         type="button"
@@ -158,11 +161,18 @@ function BooksYearSection({ year, books }) {
                                     >
                                         {book.title}
                                     </button>
+                                ) : book.relatedPostSlug ? (
+                                    <Link
+                                        to={`/blog/${book.relatedPostSlug}`}
+                                        className="book-title book-title-link"
+                                    >
+                                        {book.title}
+                                    </Link>
                                 ) : (
                                     <span className="book-title">{book.title}</span>
                                 )}{' '}
                                 by {book.author}
-                                {book.relatedPostSlug ? (
+                                {book.relatedPostSlug && hasBookSummary(book) ? (
                                     <>
                                         {' '}
                                         <Link
