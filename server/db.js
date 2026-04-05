@@ -541,7 +541,7 @@ async function backfillReadingListRelatedPosts() {
     '1984-book-note',
     'blog post',
     'george orwell',
-    ['1984', '1984 (ukr)'],
+    ['1984'],
   ]);
 }
 
