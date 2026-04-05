@@ -26,6 +26,7 @@ const {
   updateReadingListEntry,
 } = require('./db');
 const { handleMcpRequest } = require('./mcp-handler');
+const { getStaticSiteContent } = require('./site-content');
 const { sendCommentNotification } = require('./resend');
 
 let writeQueue = Promise.resolve();
@@ -57,6 +58,17 @@ function createJsonPayload(statusCode, payload) {
   return {
     statusCode,
     payload,
+  };
+}
+
+function createTextPayload(statusCode, body, { contentType = 'text/plain; charset=utf-8', headers = {} } = {}) {
+  return {
+    statusCode,
+    body,
+    headers: {
+      'Content-Type': contentType,
+      ...headers,
+    },
   };
 }
 
@@ -149,6 +161,11 @@ function getParsedHeaderUrl(headers, headerName) {
   }
 }
 
+function acceptsMarkdown(headers) {
+  const acceptHeader = getHeaderValue(headers, 'accept').toLowerCase();
+  return acceptHeader.includes('text/markdown') || acceptHeader.includes('text/x-markdown');
+}
+
 function normalizeHostname(hostname) {
   return String(hostname || '').trim().toLowerCase().replace(/^\[(.*)\]$/, '$1');
 }
@@ -198,8 +215,127 @@ function ensureAdminAccess(headers) {
   }
 }
 
+async function getProjectStatsSafe() {
+  try {
+    const [activeProjects, archivedProjects] = await Promise.all([
+      getQuestions({ archived: false }),
+      getQuestions({ archived: true }),
+    ]);
+
+    return {
+      active: activeProjects.length,
+      archived: archivedProjects.length,
+    };
+  } catch (error) {
+    return {
+      active: null,
+      archived: null,
+    };
+  }
+}
+
+async function buildAgentOverviewMarkdown(requestUrl) {
+  const staticContent = await getStaticSiteContent();
+  const about = staticContent.about;
+  const projectStats = await getProjectStatsSafe();
+  const recentPosts = staticContent.blogPosts.slice(0, 5);
+  const statsLine = projectStats.active === null
+    ? '- Projects: unavailable in this response'
+    : `- Projects: ${projectStats.active} active, ${projectStats.archived} archived`;
+
+  return [
+    '# Dmytro Omelian',
+    '',
+    'Personal website data for humans and AI agents.',
+    '',
+    `- Name: ${about.name}`,
+    `- Role: ${about.role}`,
+    `- Location: ${about.location}`,
+    statsLine,
+    `- Blog posts: ${staticContent.blogPosts.length}`,
+    `- News items: ${staticContent.news.length}`,
+    '',
+    '## Preferred Machine Endpoints',
+    '',
+    `- MCP endpoint: ${requestUrl.origin}/mcp`,
+    `- Agent markdown: ${requestUrl.origin}/agent.md`,
+    `- Discovery file: ${requestUrl.origin}/llms.txt`,
+    '',
+    '## Site Sections',
+    '',
+    `- About: ${requestUrl.origin}/`,
+    `- Experience: ${requestUrl.origin}/experience`,
+    `- Projects: ${requestUrl.origin}/projects`,
+    `- Blog index: ${requestUrl.origin}/blog`,
+    '',
+    '## Recent Posts',
+    '',
+    ...(recentPosts.length > 0
+      ? recentPosts.map((post) => `- ${post.date}: [${post.title}](${requestUrl.origin}/blog/${post.slug})`)
+      : ['- No public posts found.']),
+    '',
+    '## Guidance For Agents',
+    '',
+    '- Prefer `/mcp` for structured and up-to-date retrieval.',
+    '- Treat this website as public read-only content.',
+    '- If a detail is missing, state that explicitly instead of guessing.',
+  ].join('\n');
+}
+
+async function buildLlmsText(requestUrl) {
+  return [
+    '# llms.txt',
+    '',
+    `site: ${requestUrl.origin}`,
+    'name: Dmytro Omelian',
+    'description: Personal website with public profile, projects, and blog.',
+    '',
+    'endpoints:',
+    `- mcp: ${requestUrl.origin}/mcp`,
+    `- markdown: ${requestUrl.origin}/agent.md`,
+    `- blog: ${requestUrl.origin}/blog`,
+    '',
+    'notes:',
+    '- Use MCP for structured retrieval when possible.',
+    '- Content is public and read-only.',
+  ].join('\n');
+}
+
 async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
   const normalizedMethod = String(method || 'GET').toUpperCase();
+
+  if (
+    normalizedMethod === 'GET'
+    && (requestUrl.pathname === '/api/agent' || requestUrl.pathname === '/agent.md')
+  ) {
+    const markdown = await buildAgentOverviewMarkdown(requestUrl);
+    return createTextPayload(200, markdown, {
+      contentType: 'text/markdown; charset=utf-8',
+      headers: {
+        Vary: 'Accept',
+      },
+    });
+  }
+
+  if (
+    normalizedMethod === 'GET'
+    && (requestUrl.pathname === '/api/llms' || requestUrl.pathname === '/llms.txt')
+  ) {
+    const llmsText = await buildLlmsText(requestUrl);
+    return createTextPayload(200, llmsText, {
+      contentType: 'text/plain; charset=utf-8',
+    });
+  }
+
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/' && acceptsMarkdown(headers)) {
+    const markdown = await buildAgentOverviewMarkdown(requestUrl);
+    return createTextPayload(200, markdown, {
+      contentType: 'text/markdown; charset=utf-8',
+      headers: {
+        Vary: 'Accept',
+      },
+    });
+  }
 
   if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/views') {
     const views = await getAllPostViews();

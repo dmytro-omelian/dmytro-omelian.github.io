@@ -2,6 +2,25 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": ".*text/markdown.*"
+        }
+      ],
+      "destination": "/api?route=agent"
+    },
+    {
+      "source": "/agent.md",
+      "destination": "/api?route=agent"
+    },
+    {
+      "source": "/llms.txt",
+      "destination": "/api?route=llms"
+    },
+    {
       "source": "/mcp/:path*",
       "destination": "/api?route=mcp/:path*"
     },
