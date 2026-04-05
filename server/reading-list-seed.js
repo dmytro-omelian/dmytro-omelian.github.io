@@ -54,14 +54,6 @@ const legacyReadingListEntries = assignSeedSlugs([
       finishedOn: '2026-04-04',
       score: 3.5,
     },
-    {
-      title: '1984 (ukr)',
-      author: 'George Orwell',
-      relatedPostSlug: '1984-book-note',
-      relatedPostLabel: 'blog post',
-      finishedOn: '2026-04-03',
-      score: 5,
-    },
     { title: '🔥 House of Huawei', author: 'Eva Dou', finishedOn: '2026-02-13', score: 5 },
     { title: 'Outliers', author: 'Malcolm Gladwell', finishedOn: '2026-01-17', score: 3 },
     {
