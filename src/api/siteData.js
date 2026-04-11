@@ -214,6 +214,14 @@ export async function updateAdminBookshelfEntry(adminKey, entryId, entry) {
   });
 }
 
+export async function autoTagBookshelfEntry(adminKey, entryId, apply = false) {
+  return requestJson(`/api/admin/bookshelf/${entryId}/auto-tag`, {
+    method: 'POST',
+    headers: createAdminHeaders(adminKey),
+    body: JSON.stringify({ apply }),
+  });
+}
+
 export async function deleteAdminBookshelfEntry(adminKey, entryId) {
   return requestJson(`/api/admin/bookshelf/${entryId}`, {
     method: 'DELETE',

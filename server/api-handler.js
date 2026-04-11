@@ -17,6 +17,7 @@ const {
   getBlogCommentCounts,
   getBlogCommentsBySlug,
   getBookshelfEntries,
+  getBookshelfEntryById,
   getBookshelfTags,
   getAllPostViews,
   getPostViewCount,
@@ -30,6 +31,7 @@ const {
   updateQuestionLog,
   updateReadingListEntry,
 } = require('./db');
+const { suggestBookTags } = require('./groq');
 const { handleMcpRequest } = require('./mcp-handler');
 const { getStaticSiteContent } = require('./site-content');
 const { sendCommentNotification } = require('./resend');
@@ -482,7 +484,17 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
 
   if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/bookshelf') {
     const payload = await readJsonBody();
-    const entry = await queueWrite(() => createBookshelfEntry(payload));
+    let entry = await queueWrite(() => createBookshelfEntry(payload));
+
+    if (payload.autoTag) {
+      const allTags = await getBookshelfTags();
+      const existingTagNames = allTags.map((t) => t.name);
+      const suggestedTags = await suggestBookTags(entry.title, entry.author, existingTagNames);
+      const mergedTags = [...new Set([...(entry.tags || []), ...suggestedTags])];
+      entry = await queueWrite(() => updateBookshelfEntry(entry.id, { tags: mergedTags }));
+      return createJsonPayload(201, { entry, autoTagged: true, suggestedTags });
+    }
+
     return createJsonPayload(201, { entry });
   }
 
@@ -515,6 +527,37 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
 
       return createJsonPayload(200, { deleted: true });
     }
+  }
+
+  const autoTagMatch = requestUrl.pathname.match(/^\/api\/admin\/bookshelf\/(\d+)\/auto-tag$/);
+
+  if (normalizedMethod === 'POST' && autoTagMatch) {
+    const entryId = getNumericId(autoTagMatch[1]);
+
+    if (!entryId) {
+      return createJsonPayload(400, { error: 'Bookshelf entry id is invalid.' });
+    }
+
+    const entry = await getBookshelfEntryById(entryId);
+
+    if (!entry) {
+      return createJsonPayload(404, { error: 'Not found' });
+    }
+
+    const allTags = await getBookshelfTags();
+    const existingTagNames = allTags.map((t) => t.name);
+    const suggestedTags = await suggestBookTags(entry.title, entry.author, existingTagNames);
+
+    const payload = await readJsonBody();
+    const shouldApply = payload && payload.apply === true;
+
+    if (shouldApply) {
+      const mergedTags = [...new Set([...(entry.tags || []), ...suggestedTags])];
+      const updatedEntry = await queueWrite(() => updateBookshelfEntry(entryId, { tags: mergedTags }));
+      return createJsonPayload(200, { suggestedTags, applied: true, entry: updatedEntry });
+    }
+
+    return createJsonPayload(200, { suggestedTags, applied: false, entry });
   }
 
   if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/questions') {

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  autoTagBookshelfEntry,
   createAdminBookshelfEntry,
   deleteAdminBookshelfEntry,
   getAdminBookshelf,
@@ -161,7 +162,7 @@ function BookshelfWorkspace({
     )));
   }
 
-  async function handleCreateEntry() {
+  async function handleCreateEntry(options = {}) {
     const trimmedTitle = newEntryDraft.title.trim();
     const trimmedAuthor = newEntryDraft.author.trim();
 
@@ -186,11 +187,32 @@ function BookshelfWorkspace({
         isOnline: newEntryDraft.isOnline,
         url: newEntryDraft.url.trim() || null,
         tags,
+        autoTag: options.autoTag || false,
       });
 
       await loadEntries(adminKeyword, payload.entry.id);
       setNewEntryDraft(getDefaultNewEntryDraft());
-      setStatusMessage('Book added.');
+
+      if (payload.autoTagged && payload.suggestedTags) {
+        setStatusMessage(`Book added with auto-tags: ${payload.suggestedTags.join(', ')}`);
+      } else {
+        setStatusMessage('Book added.');
+      }
+    } catch (error) {
+      setWorkspaceError(error.message);
+    }
+  }
+
+  async function handleAutoTagEntry() {
+    if (!selectedEntry) return;
+
+    setWorkspaceError('');
+    setStatusMessage('');
+
+    try {
+      const result = await autoTagBookshelfEntry(adminKeyword, selectedEntry.id, true);
+      await loadEntries(adminKeyword, selectedEntry.id);
+      setStatusMessage(`Auto-tagged: ${result.suggestedTags.join(', ')}`);
     } catch (error) {
       setWorkspaceError(error.message);
     }
@@ -394,13 +416,22 @@ function BookshelfWorkspace({
             </label>
           </div>
 
-          <button
-            className="admin-solid-button"
-            type="button"
-            onClick={handleCreateEntry}
-          >
-            Add
-          </button>
+          <div className="admin-top-actions">
+            <button
+              className="admin-solid-button"
+              type="button"
+              onClick={() => handleCreateEntry()}
+            >
+              Add
+            </button>
+            <button
+              className="admin-ghost-button"
+              type="button"
+              onClick={() => handleCreateEntry({ autoTag: true })}
+            >
+              Add + Auto Tag
+            </button>
+          </div>
         </section>
 
       </aside>
@@ -430,6 +461,13 @@ function BookshelfWorkspace({
                   onClick={handleDeleteEntry}
                 >
                   Delete
+                </button>
+                <button
+                  className="admin-ghost-button"
+                  type="button"
+                  onClick={handleAutoTagEntry}
+                >
+                  Auto Tag
                 </button>
                 <button
                   className="admin-solid-button"

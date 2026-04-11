@@ -1724,6 +1724,7 @@ module.exports = {
   getBlogCommentCounts,
   getBlogCommentsBySlug,
   getBookshelfEntries,
+  getBookshelfEntryById,
   getBookshelfTags,
   getAllPostViews,
   getPostViewCount,
