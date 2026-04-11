@@ -84,3 +84,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS reading_list_entries_slug_unique_idx
 
 CREATE INDEX IF NOT EXISTS reading_list_entries_year_sort_idx
   ON reading_list_entries (year DESC, sort_order ASC, updated_at DESC, id ASC);
+
+CREATE TABLE IF NOT EXISTS bookshelf_entries (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  author TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('active', 'want_to_read', 'backlog')),
+  is_online BOOLEAN NOT NULL DEFAULT FALSE,
+  url TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS bookshelf_entries_status_sort_idx
+  ON bookshelf_entries (status, sort_order ASC, id ASC);
+
+CREATE TABLE IF NOT EXISTS bookshelf_tags (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS bookshelf_entry_tags (
+  entry_id BIGINT NOT NULL REFERENCES bookshelf_entries(id) ON DELETE CASCADE,
+  tag_id BIGINT NOT NULL REFERENCES bookshelf_tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (entry_id, tag_id)
+);

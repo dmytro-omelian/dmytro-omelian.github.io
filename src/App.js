@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import About from './components/about/About';
 import Experience from './components/experience/Experience';
 import Books from './components/books/Books';
+import Bookshelf from './components/bookshelf/Bookshelf';
 import Projects from './components/projects/Projects';
 import Header from './components/header/Header';
 import Footer from './components/footer/Footer';
@@ -23,6 +24,7 @@ function AppLayout() {
           <Route path="/" element={<About />} />
           <Route path="/experience" element={<Experience />} />
           <Route path="/books" element={<Books />} />
+          <Route path="/bookshelf" element={<Bookshelf />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/blog" element={<Posts />} />
           <Route path="/blog/:slug" element={<PostDetail />} />

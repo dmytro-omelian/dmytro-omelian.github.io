@@ -4,6 +4,7 @@ const packageJson = require('../package.json');
 const {
   createHttpError,
   getAllPostViews,
+  getBookshelfEntries,
   getBlogCommentCounts,
   getQuestionBySlug,
   getQuestionLogs,
@@ -22,7 +23,7 @@ const {
 
 const SERVER_NAME = 'dmytro_website';
 const SERVER_TITLE = 'Dmytro Omelian Website MCP';
-const SERVER_DESCRIPTION = 'Public, read-only MCP server for Dmytro Omelian’s profile, projects, logs, timeline, and blog.';
+const SERVER_DESCRIPTION = "Public, read-only MCP server for Dmytro Omelian\u2019s profile, projects, logs, timeline, blog, and bookshelf.";
 const RESOURCE_SCHEME = 'portfolio';
 const DEFAULT_PROTOCOL_VERSION = '2025-03-26';
 const LATEST_PROTOCOL_VERSION = '2025-11-25';
@@ -97,6 +98,13 @@ const RESOURCE_DEFINITIONS = [
     name: 'blog_index',
     title: 'Blog index',
     description: 'List of published blog posts with previews and public stats.',
+    mimeType: 'text/markdown',
+  },
+  {
+    uri: `${RESOURCE_SCHEME}://bookshelf`,
+    name: 'bookshelf',
+    title: 'Bookshelf',
+    description: 'Personal bookshelf with books grouped by status (active, want to read, backlog) and tagged by topic.',
     mimeType: 'text/markdown',
   },
 ];
@@ -241,6 +249,33 @@ const TOOL_DEFINITIONS = [
         },
       },
       required: ['slug'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_bookshelf',
+    title: 'Get bookshelf',
+    description: 'Return books from the personal bookshelf. Can filter by status (active, want_to_read, backlog) and/or tag.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          description: 'Filter by status. One of: active, want_to_read, backlog.',
+          enum: ['active', 'want_to_read', 'backlog'],
+        },
+        tag: {
+          type: 'string',
+          description: 'Filter by tag name (case-insensitive).',
+        },
+        limit: {
+          type: 'integer',
+          description: 'Maximum number of books to return.',
+          minimum: 1,
+          maximum: 500,
+          default: 100,
+        },
+      },
       additionalProperties: false,
     },
   },
@@ -538,6 +573,52 @@ function buildProjectListMarkdown(title, projects) {
   });
 }
 
+const BOOKSHELF_STATUS_LABELS = {
+  active: 'Active',
+  want_to_read: 'Want to Read',
+  backlog: 'Backlog',
+};
+
+const BOOKSHELF_STATUS_ORDER = ['active', 'want_to_read', 'backlog'];
+
+function renderBookshelfMarkdown(entries, { statusFilter, tagFilter } = {}) {
+  if (entries.length === 0) {
+    const filters = [statusFilter, tagFilter].filter(Boolean).join(', ');
+    return filters
+      ? `# Bookshelf\n\nNo books found matching: ${filters}.`
+      : '# Bookshelf\n\nNo books on the shelf yet.';
+  }
+
+  const grouped = {};
+
+  for (const status of BOOKSHELF_STATUS_ORDER) {
+    grouped[status] = [];
+  }
+
+  for (const entry of entries) {
+    const status = grouped[entry.status] ? entry.status : 'backlog';
+    grouped[status].push(entry);
+  }
+
+  const sections = BOOKSHELF_STATUS_ORDER
+    .filter((status) => grouped[status].length > 0)
+    .map((status) => {
+      const label = BOOKSHELF_STATUS_LABELS[status];
+      const lines = grouped[status].map((e) => {
+        const tags = (e.tags || []).length > 0 ? ` [${e.tags.join(', ')}]` : '';
+        const online = e.isOnline ? ' (online)' : '';
+        return `- **${e.title}** — ${e.author}${online}${tags}`;
+      });
+      return `## ${label} (${grouped[status].length})\n\n${lines.join('\n')}`;
+    });
+
+  const title = statusFilter || tagFilter
+    ? `# Bookshelf (filtered: ${[statusFilter, tagFilter].filter(Boolean).join(', ')})`
+    : `# Bookshelf (${entries.length} books)`;
+
+  return [title, '', ...sections].join('\n\n');
+}
+
 async function getBlogStats(posts) {
   const slugs = posts.map((post) => post.slug);
 
@@ -654,6 +735,11 @@ async function readResource(uri) {
         commentCounts: staticContext.commentCounts,
       }),
     );
+  }
+
+  if (uri === `${RESOURCE_SCHEME}://bookshelf`) {
+    const allEntries = await getBookshelfEntries();
+    return createTextResource(uri, renderBookshelfMarkdown(allEntries));
   }
 
   let parsedUri;
@@ -847,6 +933,17 @@ async function searchSiteContent({ query, limit }) {
     });
   });
 
+  const bookshelfEntries = await getBookshelfEntries().catch(() => []);
+
+  bookshelfEntries.forEach((entry) => {
+    searchCandidates.push({
+      type: 'bookshelf',
+      title: `${entry.title} — ${entry.author}`,
+      uri: `${RESOURCE_SCHEME}://bookshelf`,
+      body: [entry.title, entry.author, entry.status, ...(entry.tags || [])].join(' '),
+    });
+  });
+
   return searchCandidates
     .map((candidate) => ({
       ...candidate,
@@ -1018,6 +1115,47 @@ async function callTool(name, args = {}) {
           post.title,
           'Full blog post resource',
         ),
+      ],
+    });
+  }
+
+  if (name === 'get_bookshelf') {
+    const limit = normalizeLimit(args.limit, 100, { min: 1, max: 500 });
+    const statusFilter = args.status || null;
+    const tagFilter = args.tag ? String(args.tag).trim().toLowerCase() : null;
+
+    let allEntries = await getBookshelfEntries();
+
+    if (statusFilter) {
+      allEntries = allEntries.filter((e) => e.status === statusFilter);
+    }
+
+    if (tagFilter) {
+      allEntries = allEntries.filter((e) =>
+        (e.tags || []).some((t) => t.toLowerCase() === tagFilter)
+      );
+    }
+
+    const entries = allEntries.slice(0, limit);
+
+    return createToolResult({
+      text: renderBookshelfMarkdown(entries, { statusFilter, tagFilter }),
+      structuredContent: {
+        totalCount: allEntries.length,
+        returnedCount: entries.length,
+        statusFilter,
+        tagFilter,
+        entries: entries.map((e) => ({
+          id: e.id,
+          title: e.title,
+          author: e.author,
+          status: e.status,
+          isOnline: e.isOnline,
+          tags: e.tags || [],
+        })),
+      },
+      resourceLinks: [
+        createResourceLink(`${RESOURCE_SCHEME}://bookshelf`, 'bookshelf', 'Bookshelf', 'Personal bookshelf'),
       ],
     });
   }

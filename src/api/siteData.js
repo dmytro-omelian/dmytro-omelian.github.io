@@ -178,3 +178,45 @@ export async function deleteAdminReadingListEntry(adminKey, bookId) {
     headers: createAdminHeaders(adminKey),
   });
 }
+
+export async function getPublicBookshelf() {
+  const payload = await requestJson('/api/bookshelf');
+  return payload.entries || [];
+}
+
+export async function getAdminBookshelf(adminKey) {
+  const payload = await requestJson('/api/admin/bookshelf', {
+    headers: createAdminHeaders(adminKey),
+  });
+  return payload.entries || [];
+}
+
+export async function getAdminBookshelfTags(adminKey) {
+  const payload = await requestJson('/api/admin/bookshelf/tags', {
+    headers: createAdminHeaders(adminKey),
+  });
+  return payload.tags || [];
+}
+
+export async function createAdminBookshelfEntry(adminKey, entry) {
+  return requestJson('/api/admin/bookshelf', {
+    method: 'POST',
+    headers: createAdminHeaders(adminKey),
+    body: JSON.stringify(entry),
+  });
+}
+
+export async function updateAdminBookshelfEntry(adminKey, entryId, entry) {
+  return requestJson(`/api/admin/bookshelf/${entryId}`, {
+    method: 'PATCH',
+    headers: createAdminHeaders(adminKey),
+    body: JSON.stringify(entry),
+  });
+}
+
+export async function deleteAdminBookshelfEntry(adminKey, entryId) {
+  return requestJson(`/api/admin/bookshelf/${entryId}`, {
+    method: 'DELETE',
+    headers: createAdminHeaders(adminKey),
+  });
+}

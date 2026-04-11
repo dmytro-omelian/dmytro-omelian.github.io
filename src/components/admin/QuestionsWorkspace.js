@@ -149,7 +149,7 @@ function WorkspaceSwitch({ activeWorkspace, onWorkspaceChange }) {
   return (
     <div className="admin-workspace-switch" role="tablist" aria-label="Admin workspaces">
       <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'readingList' ? '' : ' is-active'}`}
+        className={`admin-workspace-switch-button${activeWorkspace === 'questions' ? ' is-active' : ''}`}
         type="button"
         onClick={() => onWorkspaceChange('questions')}
       >
@@ -161,6 +161,13 @@ function WorkspaceSwitch({ activeWorkspace, onWorkspaceChange }) {
         onClick={() => onWorkspaceChange('readingList')}
       >
         Reading list
+      </button>
+      <button
+        className={`admin-workspace-switch-button${activeWorkspace === 'bookshelf' ? ' is-active' : ''}`}
+        type="button"
+        onClick={() => onWorkspaceChange('bookshelf')}
+      >
+        Bookshelf
       </button>
     </div>
   );

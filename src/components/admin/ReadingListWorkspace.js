@@ -112,6 +112,13 @@ function WorkspaceSwitch({ activeWorkspace, onWorkspaceChange }) {
       >
         Reading list
       </button>
+      <button
+        className={`admin-workspace-switch-button${activeWorkspace === 'bookshelf' ? ' is-active' : ''}`}
+        type="button"
+        onClick={() => onWorkspaceChange('bookshelf')}
+      >
+        Bookshelf
+      </button>
     </div>
   );
 }
@@ -129,11 +136,21 @@ function ReadingListWorkspace({
   const [workspaceError, setWorkspaceError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
 
+  const [sidebarSearch, setSidebarSearch] = useState('');
+
   const selectedBook = useMemo(
     () => books.find((book) => book.id === selectedBookId) || null,
     [books, selectedBookId],
   );
-  const booksByYear = useMemo(() => groupBooksByYear(books), [books]);
+  const filteredBooks = useMemo(() => {
+    const query = sidebarSearch.trim().toLowerCase();
+    if (!query) return books;
+    return books.filter((book) =>
+      book.title.toLowerCase().includes(query)
+      || book.author.toLowerCase().includes(query)
+    );
+  }, [books, sidebarSearch]);
+  const booksByYear = useMemo(() => groupBooksByYear(filteredBooks), [filteredBooks]);
 
   async function loadBooks(keyword = adminKeyword, preferredBookId = selectedBookId) {
     if (!keyword) {
@@ -407,34 +424,6 @@ function ReadingListWorkspace({
           </button>
         </section>
 
-        <div className="admin-sidebar-list">
-          {booksByYear.map(({ year, books: yearBooks }) => (
-            <section className="admin-reading-year-group" key={year}>
-              <p className="admin-reading-year-heading">{year}</p>
-              <div className="admin-question-list admin-question-list-compact">
-                {yearBooks.map((book) => (
-                  <button
-                    key={book.id}
-                    className={`admin-question-item${book.id === selectedBookId ? ' is-active' : ''}`}
-                    type="button"
-                    onClick={() => setSelectedBookId(book.id)}
-                  >
-                    <span className="admin-question-row">
-                      <span className="admin-question-title">{book.title}</span>
-                      {book.id === selectedBookId && (
-                        <span className="admin-question-badge">Selected</span>
-                      )}
-                    </span>
-                    <span className="admin-question-meta">{formatBookMeta(book)}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-
-          {isLoadingBooks && <p className="admin-side-note">Loading books...</p>}
-          {!isLoadingBooks && books.length === 0 && <p className="admin-side-note">No books yet.</p>}
-        </div>
       </aside>
 
       <main className="admin-workspace">
@@ -617,6 +606,54 @@ function ReadingListWorkspace({
           </section>
         )}
       </main>
+
+      <section className="admin-bottom-panel">
+        <div className="admin-bottom-panel-header">
+          <p className="admin-sidebar-label">Books</p>
+          <div className="admin-sidebar-search">
+            <input
+              type="text"
+              value={sidebarSearch}
+              onChange={(event) => setSidebarSearch(event.target.value)}
+              placeholder="Search books..."
+            />
+            {sidebarSearch && (
+              <span className="admin-sidebar-search-count">
+                {filteredBooks.length} result{filteredBooks.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="admin-bottom-panel-grid">
+          {booksByYear.map(({ year, books: yearBooks }) => (
+            <section className="admin-reading-year-group" key={year}>
+              <p className="admin-reading-year-heading">{year}</p>
+              <div className="admin-question-list admin-question-list-compact">
+                {yearBooks.map((book) => (
+                  <button
+                    key={book.id}
+                    className={`admin-question-item${book.id === selectedBookId ? ' is-active' : ''}`}
+                    type="button"
+                    onClick={() => setSelectedBookId(book.id)}
+                  >
+                    <span className="admin-question-row">
+                      <span className="admin-question-title">{book.title}</span>
+                      {book.id === selectedBookId && (
+                        <span className="admin-question-badge">Selected</span>
+                      )}
+                    </span>
+                    <span className="admin-question-meta">{formatBookMeta(book)}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {isLoadingBooks && <p className="admin-side-note">Loading books...</p>}
+          {!isLoadingBooks && books.length === 0 && <p className="admin-side-note">No books yet.</p>}
+        </div>
+      </section>
     </div>
   );
 }

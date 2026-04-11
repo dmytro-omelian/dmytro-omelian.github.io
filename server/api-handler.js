@@ -2,11 +2,13 @@ require('./loadEnv');
 
 const {
   createBlogComment,
+  createBookshelfEntry,
   createHttpError,
   createQuestion,
   createQuestionLog,
   createReadingListEntry,
   deleteBlogComment,
+  deleteBookshelfEntry,
   deleteQuestionLog,
   deleteReadingListEntry,
   ensureDatabase,
@@ -14,6 +16,8 @@ const {
   getAdminQuestions,
   getBlogCommentCounts,
   getBlogCommentsBySlug,
+  getBookshelfEntries,
+  getBookshelfTags,
   getAllPostViews,
   getPostViewCount,
   getQuestionById,
@@ -21,6 +25,7 @@ const {
   getQuestions,
   getReadingListEntries,
   incrementPostView,
+  updateBookshelfEntry,
   updateQuestion,
   updateQuestionLog,
   updateReadingListEntry,
@@ -417,6 +422,11 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
     return createJsonPayload(200, { books });
   }
 
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/bookshelf') {
+    const entries = await getBookshelfEntries();
+    return createJsonPayload(200, { entries });
+  }
+
   const publicLogsMatch = requestUrl.pathname.match(/^\/api\/questions\/(\d+)\/logs$/);
 
   if (normalizedMethod === 'GET' && publicLogsMatch) {
@@ -458,6 +468,53 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
   if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/reading-list') {
     const books = await getReadingListEntries();
     return createJsonPayload(200, { books });
+  }
+
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/bookshelf') {
+    const entries = await getBookshelfEntries();
+    return createJsonPayload(200, { entries });
+  }
+
+  if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/bookshelf/tags') {
+    const tags = await getBookshelfTags();
+    return createJsonPayload(200, { tags });
+  }
+
+  if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/bookshelf') {
+    const payload = await readJsonBody();
+    const entry = await queueWrite(() => createBookshelfEntry(payload));
+    return createJsonPayload(201, { entry });
+  }
+
+  const adminBookshelfMatch = requestUrl.pathname.match(/^\/api\/admin\/bookshelf\/(\d+)$/);
+
+  if (adminBookshelfMatch) {
+    const entryId = getNumericId(adminBookshelfMatch[1]);
+
+    if (!entryId) {
+      return createJsonPayload(400, { error: 'Bookshelf entry id is invalid.' });
+    }
+
+    if (normalizedMethod === 'PATCH') {
+      const payload = await readJsonBody();
+      const entry = await queueWrite(() => updateBookshelfEntry(entryId, payload));
+
+      if (!entry) {
+        return createJsonPayload(404, { error: 'Not found' });
+      }
+
+      return createJsonPayload(200, { entry });
+    }
+
+    if (normalizedMethod === 'DELETE') {
+      const deleted = await queueWrite(() => deleteBookshelfEntry(entryId));
+
+      if (!deleted) {
+        return createJsonPayload(404, { error: 'Not found' });
+      }
+
+      return createJsonPayload(200, { deleted: true });
+    }
   }
 
   if (normalizedMethod === 'POST' && requestUrl.pathname === '/api/admin/questions') {

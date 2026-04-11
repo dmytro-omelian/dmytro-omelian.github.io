@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Admin.css';
 import { getAdminQuestions } from '../../api/siteData';
+import BookshelfWorkspace from './BookshelfWorkspace';
 import QuestionsWorkspace from './QuestionsWorkspace';
 import ReadingListWorkspace from './ReadingListWorkspace';
 
@@ -111,6 +112,17 @@ function Admin() {
   if (activeWorkspace === 'questions') {
     return (
       <QuestionsWorkspace
+        adminKeyword={adminKeyword}
+        activeWorkspace={activeWorkspace}
+        onLogout={handleLogout}
+        onWorkspaceChange={setActiveWorkspace}
+      />
+    );
+  }
+
+  if (activeWorkspace === 'bookshelf') {
+    return (
+      <BookshelfWorkspace
         adminKeyword={adminKeyword}
         activeWorkspace={activeWorkspace}
         onLogout={handleLogout}

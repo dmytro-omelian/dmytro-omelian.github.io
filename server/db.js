@@ -1506,14 +1506,216 @@ async function deleteQuestionLog(logId) {
   return true;
 }
 
+const BOOKSHELF_STATUSES = ['active', 'want_to_read', 'backlog'];
+
+function normalizeBookshelfStatus(value, fallback = 'backlog') {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  const normalizedValue = String(value).trim().toLowerCase();
+
+  if (!BOOKSHELF_STATUSES.includes(normalizedValue)) {
+    throw createHttpError(400, `status must be one of ${BOOKSHELF_STATUSES.join(', ')}.`);
+  }
+
+  return normalizedValue;
+}
+
+function mapBookshelfRow(row) {
+  return {
+    id: Number(row.id),
+    title: row.title,
+    author: row.author,
+    status: row.status,
+    isOnline: Boolean(row.is_online),
+    url: normalizeOptionalStoredText(row.url),
+    sortOrder: Number(row.sort_order),
+    tags: row.tags ? row.tags.filter(Boolean) : [],
+  };
+}
+
+async function getBookshelfEntries() {
+  await ensureDatabase();
+
+  const result = await query(`
+    SELECT
+      e.id,
+      e.title,
+      e.author,
+      e.status,
+      e.is_online,
+      e.url,
+      e.sort_order,
+      ARRAY_AGG(t.name ORDER BY t.name) FILTER (WHERE t.name IS NOT NULL) AS tags
+    FROM bookshelf_entries e
+    LEFT JOIN bookshelf_entry_tags et ON et.entry_id = e.id
+    LEFT JOIN bookshelf_tags t ON t.id = et.tag_id
+    GROUP BY e.id
+    ORDER BY e.sort_order ASC, e.id ASC
+  `);
+
+  return result.rows.map(mapBookshelfRow);
+}
+
+async function getBookshelfEntryById(entryId) {
+  await ensureDatabase();
+
+  const result = await query(`
+    SELECT
+      e.id,
+      e.title,
+      e.author,
+      e.status,
+      e.is_online,
+      e.url,
+      e.sort_order,
+      ARRAY_AGG(t.name ORDER BY t.name) FILTER (WHERE t.name IS NOT NULL) AS tags
+    FROM bookshelf_entries e
+    LEFT JOIN bookshelf_entry_tags et ON et.entry_id = e.id
+    LEFT JOIN bookshelf_tags t ON t.id = et.tag_id
+    WHERE e.id = $1
+    GROUP BY e.id
+  `, [entryId]);
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
+  return mapBookshelfRow(result.rows[0]);
+}
+
+async function syncBookshelfTags(entryId, tagNames, db) {
+  await db.query('DELETE FROM bookshelf_entry_tags WHERE entry_id = $1', [entryId]);
+
+  if (!tagNames || tagNames.length === 0) {
+    return;
+  }
+
+  for (const tagName of tagNames) {
+    const normalizedName = String(tagName).trim().toLowerCase();
+
+    if (!normalizedName) {
+      continue;
+    }
+
+    const tagResult = await db.query(`
+      INSERT INTO bookshelf_tags (name)
+      VALUES ($1)
+      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id
+    `, [normalizedName]);
+
+    await db.query(`
+      INSERT INTO bookshelf_entry_tags (entry_id, tag_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+    `, [entryId, Number(tagResult.rows[0].id)]);
+  }
+}
+
+async function createBookshelfEntry(payload) {
+  await ensureDatabase();
+
+  const title = sanitizeRequiredTextWithLimit(payload.title, 'title', 200);
+  const author = sanitizeRequiredTextWithLimit(payload.author, 'author', 200);
+  const status = normalizeBookshelfStatus(payload.status);
+  const isOnline = normalizeOptionalBoolean(payload.isOnline, false);
+  const url = sanitizeOptionalText(payload.url, { maxLength: 2000 });
+  const sortOrder = normalizeSortOrder(payload.sortOrder, 0);
+  const tags = Array.isArray(payload.tags) ? payload.tags : [];
+
+  const createdEntryId = await withTransaction(async (db) => {
+    const result = await db.query(`
+      INSERT INTO bookshelf_entries (title, author, status, is_online, url, sort_order)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
+    `, [title, author, status, isOnline, url, sortOrder]);
+
+    const entryId = Number(result.rows[0].id);
+    await syncBookshelfTags(entryId, tags, db);
+    return entryId;
+  });
+
+  return getBookshelfEntryById(createdEntryId);
+}
+
+async function updateBookshelfEntry(entryId, payload) {
+  await ensureDatabase();
+
+  const updatedEntryId = await withTransaction(async (db) => {
+    const existingResult = await db.query('SELECT id FROM bookshelf_entries WHERE id = $1', [entryId]);
+
+    if (existingResult.rowCount === 0) {
+      return null;
+    }
+
+    const existing = await getBookshelfEntryById(entryId);
+
+    const nextTitle = payload.title !== undefined
+      ? sanitizeRequiredTextWithLimit(payload.title, 'title', 200)
+      : existing.title;
+    const nextAuthor = payload.author !== undefined
+      ? sanitizeRequiredTextWithLimit(payload.author, 'author', 200)
+      : existing.author;
+    const nextStatus = payload.status !== undefined
+      ? normalizeBookshelfStatus(payload.status)
+      : existing.status;
+    const nextIsOnline = payload.isOnline !== undefined
+      ? normalizeOptionalBoolean(payload.isOnline, existing.isOnline)
+      : existing.isOnline;
+    const nextUrl = payload.url !== undefined
+      ? sanitizeOptionalText(payload.url, { maxLength: 2000 })
+      : existing.url;
+    const nextSortOrder = payload.sortOrder !== undefined
+      ? normalizeSortOrder(payload.sortOrder, existing.sortOrder)
+      : existing.sortOrder;
+
+    await db.query(`
+      UPDATE bookshelf_entries
+      SET title = $1, author = $2, status = $3, is_online = $4, url = $5, sort_order = $6, updated_at = NOW()
+      WHERE id = $7
+    `, [nextTitle, nextAuthor, nextStatus, nextIsOnline, nextUrl, nextSortOrder, entryId]);
+
+    if (payload.tags !== undefined) {
+      const tags = Array.isArray(payload.tags) ? payload.tags : [];
+      await syncBookshelfTags(entryId, tags, db);
+    }
+
+    return entryId;
+  });
+
+  if (!updatedEntryId) {
+    return null;
+  }
+
+  return getBookshelfEntryById(updatedEntryId);
+}
+
+async function deleteBookshelfEntry(entryId) {
+  await ensureDatabase();
+
+  const result = await query('DELETE FROM bookshelf_entries WHERE id = $1 RETURNING id', [entryId]);
+  return result.rowCount > 0;
+}
+
+async function getBookshelfTags() {
+  await ensureDatabase();
+
+  const result = await query('SELECT id, name FROM bookshelf_tags ORDER BY name ASC');
+  return result.rows.map((row) => ({ id: Number(row.id), name: row.name }));
+}
+
 module.exports = {
   closePool,
   createBlogComment,
+  createBookshelfEntry,
   createHttpError,
   createQuestion,
   createQuestionLog,
   createReadingListEntry,
   deleteBlogComment,
+  deleteBookshelfEntry,
   deleteQuestionLog,
   deleteReadingListEntry,
   ensureDatabase,
@@ -1521,6 +1723,8 @@ module.exports = {
   getAdminQuestions,
   getBlogCommentCounts,
   getBlogCommentsBySlug,
+  getBookshelfEntries,
+  getBookshelfTags,
   getAllPostViews,
   getPostViewCount,
   getQuestionById,
@@ -1529,6 +1733,7 @@ module.exports = {
   getQuestions,
   getReadingListEntries,
   incrementPostView,
+  updateBookshelfEntry,
   updateQuestion,
   updateQuestionLog,
   updateReadingListEntry,
