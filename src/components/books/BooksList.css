@@ -37,38 +37,6 @@
   margin-top: 5%;
 }
 
-.books-search {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.books-search-input {
-  width: 100%;
-  max-width: 340px;
-  border: 1px solid #ddd6c8;
-  background: #ffffff;
-  padding: 8px 12px;
-  font: inherit;
-  font-size: 14px;
-  color: #1c1a17;
-}
-
-.books-search-input::placeholder {
-  color: #9a9a9a;
-}
-
-.books-search-input:focus {
-  outline: none;
-  border-color: #999;
-}
-
-.books-search-count {
-  font-size: 13px;
-  color: #9a9a9a;
-  white-space: nowrap;
-}
 
 .books-feedback {
   margin: 18px 0;

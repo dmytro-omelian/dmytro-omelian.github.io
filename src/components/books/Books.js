@@ -10,16 +10,7 @@ function Books() {
   const [books, setBooks] = useState([]);
   const [isLoadingBooks, setIsLoadingBooks] = useState(true);
   const [booksError, setBooksError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const filteredBooks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return books;
-    return books.filter((book) =>
-      book.title.toLowerCase().includes(query)
-      || book.author.toLowerCase().includes(query)
-    );
-  }, [books, searchQuery]);
-  const booksByYear = useMemo(() => groupBooksByYear(filteredBooks), [filteredBooks]);
+  const booksByYear = useMemo(() => groupBooksByYear(books), [books]);
 
   useEffect(() => {
     let isActive = true;
@@ -56,23 +47,6 @@ function Books() {
   return (
     <div className="books-list-container">
       <h2 className="books-container-title">An incomplete list of books that I&apos;ve been reading lately...</h2>
-
-      {!isLoadingBooks && !booksError && books.length > 0 && (
-        <div className="books-search">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search by title or author..."
-            className="books-search-input"
-          />
-          {searchQuery && (
-            <span className="books-search-count">
-              {filteredBooks.length} of {books.length}
-            </span>
-          )}
-        </div>
-      )}
 
       {isLoadingBooks && <p className="books-feedback">Loading reading list...</p>}
       {!isLoadingBooks && booksError && <p className="books-feedback books-feedback-error">{booksError}</p>}
