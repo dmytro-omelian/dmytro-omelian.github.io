@@ -8,6 +8,36 @@ import './Posts.css';
 
 const posts = [
     {
+        id: 9,
+        slug: "dopamine",
+        title: "dopamine",
+        author: "Dmytro Omelian",
+        date: "April 17, 2026",
+        preview: "i was 17 when i first noticed it. six years into the fight with screens, dopamine, and a brain that always finds the workaround.",
+        content: [
+            "i was 17 when i first noticed it.",
+            "i had been watching youtube for what i thought was 30 minutes, looked up, and 2–3 hours had passed. that feeling — the one where you can't remember what you actually watched, you just know it's gone — was the first thing about a screen that scared me.",
+            "i'm 23 now. so i've been in this fight for about six years.",
+            "in those six years i installed Opal. i installed lots of chrome extension that sounded serious enough. i deleted accounts. i uninstalled apps. i turned on screen time, grayscale mode, content filters. i tried app-locking apps, and then tried app-locking the app-locking apps (okey, lying, the last one i didn't try yet).",
+            "every single time, my brain found a way around it.",
+            "that's the part that surprised me the most. not that apps are addictive — everyone knows that. the surprising part is how creative my brain gets in moments of weakness. it treats every limit i set like a puzzle. \"this system is not ideal. there is a workaround somewhere.\" and there always is, because i'm the one who set the rules.",
+            "i would love to read real research on what the brain is doing in those moments. because it doesn't feel like me. it's faster. it's smarter at bypassing friction than i am at adding it.",
+            "so the first thing i learned: hard blockers don't work alone.",
+            "what actually works, for me, is hard blockers plus *mind work*. by mind work i mean visualizing what i'm actually trading when i open the app. sitting with the trigger that pulled me there — was i tired? bored? avoiding a hard conversation? — and trying to fix the trigger instead of the app.",
+            "Opal doesn't save you. Opal plus knowing why you were reaching for your phone at 11:47pm on a tuesday — that sometimes saves you.",
+            "the second thing i learned is harder to say.",
+            "the addiction changed shape as i changed. in the early years i thought the cost was productivity — hours lost to youtube, time i could have spent studying or building. i could do the math: *even one hour a week for six years is hundreds of hours*. i don't love that math. \"screen time\" is the wrong unit. the real cost was somewhere else.",
+            "i was less present at things that mattered. i missed jokes, references, whatever was going on — which sounds small, but it adds up into a quiet distance from the people around you. i started to notice it during family dinners. there are small moments i don't remember because i wasn't really in them.",
+            "no screen-time report will show you that.",
+            "i have a background in engineer and i know, roughly, the shape of the teams on the other side. they are very good. they run experiments. they have metrics for exactly how many seconds it takes me to re-open an app after i close it. they are paid a lot of money to make sure i open the app one more time today.",
+            "i'm not going to win this the way i thought i would at 17. i'm not going to install the right app. i'm not going to build the perfect routine that locks me out of everything for good. my brain is too smart for that, and they are way too smart for that.",
+            "so i don't have a system to sell you. i lose hours some weeks. i find the workaround. my brain is still smarter than my blockers in the moments it wants to be.",
+            "what i can do is keep noticing. keep asking what i was actually trying to feel when i reached for the phone. keep running small experiments on myself, and keep losing some of them.",
+            "and the thing that keeps me running them isn't discipline. it's fear. a specific fear — of what those hours actually cost.",
+            "— dmytro"
+        ]
+    },
+    {
         id: 8,
         slug: "1984-book-note",
         title: "1984 — нотатка після прочитання",
