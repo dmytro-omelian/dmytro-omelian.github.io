@@ -142,14 +142,30 @@ function sanitizeSlug(value, fieldName = 'slug') {
   return sanitizeRequiredTextWithLimit(value, fieldName, 160);
 }
 
-function sanitizeOptionalBlogPostSlug(value, fieldName = 'relatedPostSlug') {
-  const normalizedValue = sanitizeOptionalText(value, { maxLength: 500 });
+function sanitizeOptionalBlogPostLinkTarget(value, fieldName = 'relatedPostSlug') {
+  const normalizedValue = sanitizeOptionalText(value, { maxLength: 2048 });
 
   if (!normalizedValue) {
     return null;
   }
 
-  const blogPathMatch = normalizedValue.match(/(?:^|\/)blog\/([^/?#]+)/i);
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    let parsedUrl;
+
+    try {
+      parsedUrl = new URL(normalizedValue);
+    } catch (error) {
+      throw createHttpError(400, `${fieldName} must be a valid http or https URL.`);
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw createHttpError(400, `${fieldName} must be a valid http or https URL.`);
+    }
+
+    return parsedUrl.toString();
+  }
+
+  const blogPathMatch = normalizedValue.match(/^\/?blog\/([^/?#]+)/i);
   let slugCandidate = blogPathMatch ? blogPathMatch[1] : normalizedValue;
 
   try {
@@ -582,7 +598,7 @@ async function syncReadingListSeedMetadata() {
       const author = sanitizeRequiredTextWithLimit(entry.author, 'author', 200);
       const slug = sanitizeRequiredReadingListSlug(entry.slug || entry.title, 'slug');
       const summaryMarkdown = sanitizeOptionalText(entry.summaryMarkdown, { maxLength: 20000 });
-      const relatedPostSlug = sanitizeOptionalBlogPostSlug(entry.relatedPostSlug, 'relatedPostSlug');
+      const relatedPostSlug = sanitizeOptionalBlogPostLinkTarget(entry.relatedPostSlug, 'relatedPostSlug');
       const relatedPostLabel = sanitizeOptionalText(entry.relatedPostLabel, { maxLength: 120 });
       const finishedOn = normalizeOptionalReadingListFinishedOn(entry.finishedOn);
       const score = normalizeOptionalReadingListScore(entry.score);
@@ -1058,7 +1074,7 @@ async function createReadingListEntry(payload) {
   const sortOrder = hasSortOrder ? normalizeRequiredInteger(payload.sortOrder, 'sortOrder') : null;
   const slug = sanitizeRequiredReadingListSlug(payload.slug, 'slug');
   const summaryMarkdown = sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 });
-  const relatedPostSlug = sanitizeOptionalBlogPostSlug(payload.relatedPostSlug, 'relatedPostSlug');
+  const relatedPostSlug = sanitizeOptionalBlogPostLinkTarget(payload.relatedPostSlug, 'relatedPostSlug');
   const relatedPostLabel = sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 });
   const finishedOn = normalizeOptionalReadingListFinishedOn(payload.finishedOn);
   const score = normalizeOptionalReadingListScore(payload.score);
@@ -1141,7 +1157,7 @@ async function updateReadingListEntry(entryId, payload) {
       ? sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 })
       : existingEntry.summaryMarkdown;
     const nextRelatedPostSlug = payload.relatedPostSlug !== undefined
-      ? sanitizeOptionalBlogPostSlug(payload.relatedPostSlug, 'relatedPostSlug')
+      ? sanitizeOptionalBlogPostLinkTarget(payload.relatedPostSlug, 'relatedPostSlug')
       : existingEntry.relatedPostSlug;
     const nextRelatedPostLabel = payload.relatedPostLabel !== undefined
       ? sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 })

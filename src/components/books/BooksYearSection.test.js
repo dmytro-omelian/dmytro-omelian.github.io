@@ -111,6 +111,51 @@ describe('BooksYearSection', () => {
     expect(container.querySelector('#book-meta-only')?.getAttribute('data-book-meta')).toBe('04/04/2026 · 3.5/5');
   });
 
+  test('renders an internal blog slug as an app blog link', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <BooksYearSection
+          year="2026"
+          books={[
+            {
+              id: 1,
+              title: 'Internal Blog',
+              author: 'Author',
+              relatedPostSlug: 'about-nvidia-way',
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Internal Blog' });
+    expect(link).toHaveAttribute('href', '/blog/about-nvidia-way');
+    expect(link).not.toHaveAttribute('target');
+  });
+
+  test('renders an external blog URL as a new-tab link', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <BooksYearSection
+          year="2026"
+          books={[
+            {
+              id: 1,
+              title: 'External Blog',
+              author: 'Author',
+              relatedPostSlug: 'https://domelian.substack.com/p/read-this-before-your-next-long-project',
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole('link', { name: 'External Blog' });
+    expect(link).toHaveAttribute('href', 'https://domelian.substack.com/p/read-this-before-your-next-long-project');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noreferrer');
+  });
+
   test('opens a summary from an encoded hash for a unicode slug', async () => {
     window.history.replaceState(null, '', `/books#book-${encodeURIComponent('квіти-для-елджернона')}`);
 

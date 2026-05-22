@@ -30,6 +30,63 @@ function getBookFromHash(books) {
     return books.find((book) => book.slug === slug && hasBookSummary(book)) || null;
 }
 
+function isExternalLinkTarget(value) {
+    return /^https?:\/\//i.test(String(value || '').trim());
+}
+
+function getInternalBlogPath(value) {
+    const trimmedValue = String(value || '').trim();
+    const blogPathMatch = trimmedValue.match(/^\/?blog\/([^/?#]+)/i);
+    let slug = blogPathMatch ? blogPathMatch[1] : trimmedValue;
+
+    try {
+        slug = decodeURIComponent(slug);
+    } catch (error) {
+        // Keep the raw slug if it is not URI-encoded.
+    }
+
+    return `/blog/${encodeURIComponent(slug)}`;
+}
+
+function getRelatedPostLinkTarget(book) {
+    const target = String(book?.relatedPostSlug || '').trim();
+
+    if (!target) {
+        return null;
+    }
+
+    return isExternalLinkTarget(target)
+        ? { href: target, isExternal: true }
+        : { href: getInternalBlogPath(target), isExternal: false };
+}
+
+function RelatedPostLink({ book, className, children }) {
+    const target = getRelatedPostLinkTarget(book);
+
+    if (!target) {
+        return null;
+    }
+
+    if (target.isExternal) {
+        return (
+            <a
+                href={target.href}
+                className={className}
+                target="_blank"
+                rel="noreferrer"
+            >
+                {children}
+            </a>
+        );
+    }
+
+    return (
+        <Link to={target.href} className={className}>
+            {children}
+        </Link>
+    );
+}
+
 function formatBookFinishedDate(value) {
     const dateMatch = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
@@ -217,12 +274,12 @@ function BooksYearSection({ year, books }) {
                                             {book.title}
                                         </button>
                                     ) : book.relatedPostSlug ? (
-                                        <Link
-                                            to={`/blog/${book.relatedPostSlug}`}
+                                        <RelatedPostLink
+                                            book={book}
                                             className="book-title book-title-link"
                                         >
                                             {book.title}
-                                        </Link>
+                                        </RelatedPostLink>
                                     ) : (
                                         <span className="book-title">{book.title}</span>
                                     )}{' '}
@@ -230,12 +287,12 @@ function BooksYearSection({ year, books }) {
                                     {book.relatedPostSlug && hasBookSummary(book) ? (
                                         <>
                                             {' '}
-                                            <Link
-                                                to={`/blog/${book.relatedPostSlug}`}
+                                            <RelatedPostLink
+                                                book={book}
                                                 className="book-related-link"
                                             >
                                                 {book.relatedPostLabel || 'blog post'}
-                                            </Link>
+                                            </RelatedPostLink>
                                         </>
                                     ) : null}
                                 </li>

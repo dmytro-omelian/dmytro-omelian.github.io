@@ -85,7 +85,7 @@ describe('ReadingListWorkspace', () => {
 
     await userEvent.type(screen.getByPlaceholderText('The Art of Learning'), 'Three');
     await userEvent.type(screen.getByPlaceholderText('Josh Waitzkin'), 'Author Three');
-    await userEvent.type(screen.getAllByPlaceholderText('about-nvidia-way or /blog/about-nvidia-way')[0], '/blog/three-notes?ref=admin');
+    await userEvent.type(screen.getAllByPlaceholderText('about-nvidia-way or https://domelian.substack.com/p/...')[0], 'https://domelian.substack.com/p/read-this-before-your-next-long-project');
     await userEvent.type(screen.getAllByPlaceholderText('blog post')[0], 'book note');
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
 
@@ -95,7 +95,7 @@ describe('ReadingListWorkspace', () => {
       author: 'Author Three',
       slug: 'three',
       sortOrder: 2,
-      relatedPostSlug: 'three-notes',
+      relatedPostSlug: 'https://domelian.substack.com/p/read-this-before-your-next-long-project',
       relatedPostLabel: 'book note',
     });
 
@@ -104,7 +104,7 @@ describe('ReadingListWorkspace', () => {
     const editorTitleInput = screen.getByDisplayValue('One');
     await userEvent.clear(editorTitleInput);
     await userEvent.type(editorTitleInput, 'One updated');
-    await userEvent.type(screen.getAllByPlaceholderText('about-nvidia-way or /blog/about-nvidia-way')[1], 'https://example.com/blog/one-review#discussion');
+    await userEvent.type(screen.getAllByPlaceholderText('about-nvidia-way or https://domelian.substack.com/p/...')[1], 'about-nvidia-way');
     await userEvent.type(screen.getAllByPlaceholderText('blog post')[1], 'writeup');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -114,7 +114,7 @@ describe('ReadingListWorkspace', () => {
       author: 'Author One',
       slug: 'one-updated',
       sortOrder: 0,
-      relatedPostSlug: 'one-review',
+      relatedPostSlug: 'about-nvidia-way',
       relatedPostLabel: 'writeup',
     }));
 

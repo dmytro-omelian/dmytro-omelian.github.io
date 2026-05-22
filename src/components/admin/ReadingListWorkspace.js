@@ -46,7 +46,11 @@ function normalizeBlogLinkInput(value) {
     return null;
   }
 
-  const blogPathMatch = trimmedValue.match(/(?:^|\/)blog\/([^/?#]+)/i);
+  if (/^https?:\/\//i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  const blogPathMatch = trimmedValue.match(/^\/?blog\/([^/?#]+)/i);
 
   if (!blogPathMatch) {
     return trimmedValue;
@@ -426,7 +430,7 @@ function ReadingListWorkspace({
                   ...currentDraft,
                   relatedPostSlug: event.target.value,
                 }))}
-                placeholder="about-nvidia-way or /blog/about-nvidia-way"
+                placeholder="about-nvidia-way or https://domelian.substack.com/p/..."
               />
             </label>
 
@@ -616,7 +620,7 @@ function ReadingListWorkspace({
                       type="text"
                       value={selectedBook.relatedPostSlug || ''}
                       onChange={(event) => handleBookFieldChange('relatedPostSlug', event.target.value)}
-                      placeholder="about-nvidia-way or /blog/about-nvidia-way"
+                      placeholder="about-nvidia-way or https://domelian.substack.com/p/..."
                     />
                   </label>
 
