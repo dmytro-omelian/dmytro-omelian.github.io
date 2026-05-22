@@ -85,6 +85,8 @@ describe('ReadingListWorkspace', () => {
 
     await userEvent.type(screen.getByPlaceholderText('The Art of Learning'), 'Three');
     await userEvent.type(screen.getByPlaceholderText('Josh Waitzkin'), 'Author Three');
+    await userEvent.type(screen.getAllByPlaceholderText('about-nvidia-way or /blog/about-nvidia-way')[0], '/blog/three-notes?ref=admin');
+    await userEvent.type(screen.getAllByPlaceholderText('blog post')[0], 'book note');
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(createAdminReadingListEntry).toHaveBeenCalledWith('secret', {
@@ -93,6 +95,8 @@ describe('ReadingListWorkspace', () => {
       author: 'Author Three',
       slug: 'three',
       sortOrder: 2,
+      relatedPostSlug: 'three-notes',
+      relatedPostLabel: 'book note',
     });
 
     await waitFor(() => expect(getAdminReadingList).toHaveBeenCalledTimes(2));
@@ -100,6 +104,8 @@ describe('ReadingListWorkspace', () => {
     const editorTitleInput = screen.getByDisplayValue('One');
     await userEvent.clear(editorTitleInput);
     await userEvent.type(editorTitleInput, 'One updated');
+    await userEvent.type(screen.getAllByPlaceholderText('about-nvidia-way or /blog/about-nvidia-way')[1], 'https://example.com/blog/one-review#discussion');
+    await userEvent.type(screen.getAllByPlaceholderText('blog post')[1], 'writeup');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(updateAdminReadingListEntry).toHaveBeenCalledWith('secret', 1, expect.objectContaining({
@@ -108,6 +114,8 @@ describe('ReadingListWorkspace', () => {
       author: 'Author One',
       slug: 'one-updated',
       sortOrder: 0,
+      relatedPostSlug: 'one-review',
+      relatedPostLabel: 'writeup',
     }));
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));

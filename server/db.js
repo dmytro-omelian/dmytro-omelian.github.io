@@ -142,17 +142,30 @@ function sanitizeSlug(value, fieldName = 'slug') {
   return sanitizeRequiredTextWithLimit(value, fieldName, 160);
 }
 
-function sanitizeOptionalSlug(value, fieldName = 'slug') {
-  const normalizedValue = sanitizeOptionalText(value, { maxLength: 160 });
+function sanitizeOptionalBlogPostSlug(value, fieldName = 'relatedPostSlug') {
+  const normalizedValue = sanitizeOptionalText(value, { maxLength: 500 });
 
   if (!normalizedValue) {
     return null;
   }
 
-  const normalizedSlug = slugify(normalizedValue);
+  const blogPathMatch = normalizedValue.match(/(?:^|\/)blog\/([^/?#]+)/i);
+  let slugCandidate = blogPathMatch ? blogPathMatch[1] : normalizedValue;
+
+  try {
+    slugCandidate = decodeURIComponent(slugCandidate);
+  } catch (error) {
+    // Keep the raw candidate and let slugify normalize it below.
+  }
+
+  const normalizedSlug = slugify(slugCandidate);
 
   if (!normalizedSlug) {
     throw createHttpError(400, `${fieldName} is invalid.`);
+  }
+
+  if (normalizedSlug.length > 160) {
+    throw createHttpError(400, `${fieldName} must be at most 160 characters.`);
   }
 
   return normalizedSlug;
@@ -569,7 +582,7 @@ async function syncReadingListSeedMetadata() {
       const author = sanitizeRequiredTextWithLimit(entry.author, 'author', 200);
       const slug = sanitizeRequiredReadingListSlug(entry.slug || entry.title, 'slug');
       const summaryMarkdown = sanitizeOptionalText(entry.summaryMarkdown, { maxLength: 20000 });
-      const relatedPostSlug = sanitizeOptionalSlug(entry.relatedPostSlug, 'relatedPostSlug');
+      const relatedPostSlug = sanitizeOptionalBlogPostSlug(entry.relatedPostSlug, 'relatedPostSlug');
       const relatedPostLabel = sanitizeOptionalText(entry.relatedPostLabel, { maxLength: 120 });
       const finishedOn = normalizeOptionalReadingListFinishedOn(entry.finishedOn);
       const score = normalizeOptionalReadingListScore(entry.score);
@@ -1045,7 +1058,7 @@ async function createReadingListEntry(payload) {
   const sortOrder = hasSortOrder ? normalizeRequiredInteger(payload.sortOrder, 'sortOrder') : null;
   const slug = sanitizeRequiredReadingListSlug(payload.slug, 'slug');
   const summaryMarkdown = sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 });
-  const relatedPostSlug = sanitizeOptionalSlug(payload.relatedPostSlug, 'relatedPostSlug');
+  const relatedPostSlug = sanitizeOptionalBlogPostSlug(payload.relatedPostSlug, 'relatedPostSlug');
   const relatedPostLabel = sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 });
   const finishedOn = normalizeOptionalReadingListFinishedOn(payload.finishedOn);
   const score = normalizeOptionalReadingListScore(payload.score);
@@ -1128,7 +1141,7 @@ async function updateReadingListEntry(entryId, payload) {
       ? sanitizeOptionalText(payload.summaryMarkdown, { maxLength: 20000 })
       : existingEntry.summaryMarkdown;
     const nextRelatedPostSlug = payload.relatedPostSlug !== undefined
-      ? sanitizeOptionalSlug(payload.relatedPostSlug, 'relatedPostSlug')
+      ? sanitizeOptionalBlogPostSlug(payload.relatedPostSlug, 'relatedPostSlug')
       : existingEntry.relatedPostSlug;
     const nextRelatedPostLabel = payload.relatedPostLabel !== undefined
       ? sanitizeOptionalText(payload.relatedPostLabel, { maxLength: 120 })
