@@ -222,33 +222,10 @@ function ensureAdminAccess(headers) {
   }
 }
 
-async function getProjectStatsSafe() {
-  try {
-    const [activeProjects, archivedProjects] = await Promise.all([
-      getQuestions({ archived: false }),
-      getQuestions({ archived: true }),
-    ]);
-
-    return {
-      active: activeProjects.length,
-      archived: archivedProjects.length,
-    };
-  } catch (error) {
-    return {
-      active: null,
-      archived: null,
-    };
-  }
-}
-
 async function buildAgentOverviewMarkdown(requestUrl) {
   const staticContent = await getStaticSiteContent();
   const about = staticContent.about;
-  const projectStats = await getProjectStatsSafe();
   const recentPosts = staticContent.blogPosts.slice(0, 5);
-  const statsLine = projectStats.active === null
-    ? '- Projects: unavailable in this response'
-    : `- Projects: ${projectStats.active} active, ${projectStats.archived} archived`;
 
   return [
     '# Dmytro Omelian',
@@ -258,7 +235,6 @@ async function buildAgentOverviewMarkdown(requestUrl) {
     `- Name: ${about.name}`,
     `- Role: ${about.role}`,
     `- Location: ${about.location}`,
-    statsLine,
     `- Blog posts: ${staticContent.blogPosts.length}`,
     `- News items: ${staticContent.news.length}`,
     '',
@@ -272,13 +248,15 @@ async function buildAgentOverviewMarkdown(requestUrl) {
     '',
     `- About: ${requestUrl.origin}/`,
     `- Experience: ${requestUrl.origin}/experience`,
-    `- Projects: ${requestUrl.origin}/projects`,
     `- Blog index: ${requestUrl.origin}/blog`,
     '',
     '## Recent Posts',
     '',
     ...(recentPosts.length > 0
-      ? recentPosts.map((post) => `- ${post.date}: [${post.title}](${requestUrl.origin}/blog/${post.slug})`)
+      ? recentPosts.map((post) => {
+        const postUrl = post.externalUrl || `${requestUrl.origin}/blog/${post.slug}`;
+        return `- ${post.date}: [${post.title}](${postUrl})`;
+      })
       : ['- No public posts found.']),
     '',
     '## Guidance For Agents',
@@ -295,7 +273,7 @@ async function buildLlmsText(requestUrl) {
     '',
     `site: ${requestUrl.origin}`,
     'name: Dmytro Omelian',
-    'description: Personal website with public profile, projects, and blog.',
+    'description: Personal website with public profile, writing, and blog.',
     '',
     'endpoints:',
     `- mcp: ${requestUrl.origin}/mcp`,
@@ -473,7 +451,7 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
   }
 
   if (normalizedMethod === 'GET' && requestUrl.pathname === '/api/admin/bookshelf') {
-    const entries = await getBookshelfEntries();
+    const entries = await getBookshelfEntries({ includeInternalNotes: true });
     return createJsonPayload(200, { entries });
   }
 
@@ -538,7 +516,7 @@ async function routeApiRequest({ method, requestUrl, headers, readJsonBody }) {
       return createJsonPayload(400, { error: 'Bookshelf entry id is invalid.' });
     }
 
-    const entry = await getBookshelfEntryById(entryId);
+    const entry = await getBookshelfEntryById(entryId, { includeInternalNotes: true });
 
     if (!entry) {
       return createJsonPayload(404, { error: 'Not found' });

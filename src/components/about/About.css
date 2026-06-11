@@ -21,7 +21,6 @@
 }
 
 .about-copy-column,
-.about-questions-block,
 .about-profile-card,
 .about-side-card,
 .newsletter-section {
@@ -33,11 +32,6 @@
 .about-copy-column {
   padding: 0;
   background: transparent;
-}
-
-.about-questions-block {
-  padding-top: 28px;
-  border-top: 1px solid #e3e3e3;
 }
 
 .about-copy-column h1 {

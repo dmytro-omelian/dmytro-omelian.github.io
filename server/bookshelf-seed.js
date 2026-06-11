@@ -4,12 +4,18 @@
  */
 require('./loadEnv');
 
-const { createBookshelfEntry, ensureDatabase } = require('./db');
+const {
+  closePool,
+  createBookshelfEntry,
+  ensureDatabase,
+  getBookshelfEntries,
+  updateBookshelfEntry,
+} = require('./db');
 
 // ── Online books (from ebook files) ────────────────────────────────────────
 const onlineBooks = [
   { title: '$100M Leads', author: 'Alex Hormozi', tags: ['business', 'marketing', 'sales'] },
-  { title: 'Талановитий містер Ріплі', author: 'Патриція Гайсміт', tags: ['fiction', 'thriller'] },
+  { title: 'The Talented Mr. Ripley', author: 'Patricia Highsmith', tags: ['fiction', 'thriller'] },
   { title: '507 Mechanical Movements', author: 'Henry T. Brown', tags: ['engineering', 'reference'] },
   { title: 'A Beautiful Mind', author: 'Sylvia Nasar', tags: ['biography', 'mathematics', 'science'] },
   { title: 'A Brief Guide to Stephen King', author: 'Paul Simpson', tags: ['literature', 'reference'] },
@@ -267,9 +273,9 @@ const onlineBooks = [
   { title: 'The Gifts of Imperfection', author: 'Brené Brown', tags: ['self-help', 'psychology'] },
   { title: 'The Stranger in the Woods', author: 'Michael Finkel', tags: ['memoir', 'nature'] },
   { title: 'The Wealth of Nations', author: 'Adam Smith', tags: ['economics', 'classic', 'philosophy'] },
-  { title: 'Воєнні мемуари, Том 1', author: 'Шарль де Голль', tags: ['memoir', 'history', 'war'] },
+  { title: 'War Memoirs, Volume 1', author: 'Charles de Gaulle', tags: ['memoir', 'history', 'war'] },
   { title: 'Гемінґвей нічого не знає', author: 'Сергій Жадан', tags: ['fiction', 'Ukrainian literature'] },
-  { title: 'Чайка Джонатан Лівінгстон', author: 'Річард Бах', tags: ['fiction', 'philosophy', 'fable'] },
+  { title: 'Jonathan Livingston Seagull', author: 'Richard Bach', tags: ['fiction', 'philosophy', 'fable'] },
   { title: 'LDL Sample', author: 'Various', tags: ['health', 'science'] },
 ];
 
@@ -278,8 +284,8 @@ const onlineBooks = [
 const physicalBooks = [
   { title: 'On Writing: A Memoir of the Craft', author: 'Stephen King', tags: ['writing', 'memoir'] },
   { title: 'Doctor Sleep', author: 'Stephen King', tags: ['fiction', 'horror'] },
-  { title: 'Стрілець', author: 'Стівен Кінг', tags: ['fiction', 'fantasy', 'classic'] },
-  { title: 'Зелена миля', author: 'Стівен Кінг', tags: ['fiction', 'classic'] },
+  { title: 'The Gunslinger', author: 'Stephen King', tags: ['fiction', 'fantasy', 'classic'] },
+  { title: 'The Green Mile', author: 'Stephen King', tags: ['fiction', 'classic'] },
   { title: 'Sapiens: A Brief History of Humankind', author: 'Yuval Noah Harari', tags: ['history', 'science', 'philosophy'] },
   { title: 'This Is Marketing', author: 'Seth Godin', tags: ['marketing', 'business'] },
   { title: 'On Freedom', author: 'Timothy Snyder', tags: ['politics', 'philosophy', 'history'] },
@@ -287,58 +293,60 @@ const physicalBooks = [
   { title: 'Hooked', author: 'Nir Eyal', tags: ['product', 'psychology', 'business'] },
   { title: 'iWoz', author: 'Steve Wozniak & Gina Smith', tags: ['biography', 'technology'] },
   { title: 'Brief Answers to the Big Questions', author: 'Stephen Hawking', tags: ['science', 'physics', 'philosophy'] },
-  { title: 'Страшенно голосно і неймовірно близько', author: 'Джонатан Сафран Фоер', tags: ['fiction', 'literature'] },
-  { title: 'Чудове подружжя', author: 'Кімберлі Маккрейт', tags: ['fiction', 'thriller'] },
-  { title: 'Каста', author: 'Ізабель Вілкерсон', tags: ['sociology', 'history', 'politics'] },
-  { title: 'Розум. Убивці', author: 'Майк Омер', tags: ['fiction', 'thriller'] },
-  { title: 'Смажені зелені помідори в кафе «Зупинка»', author: 'Фенні Флегг', tags: ['fiction', 'classic'] },
-  { title: 'Санаторій', author: 'Сара Пірс', tags: ['fiction', 'thriller'] },
-  { title: '4000 тижнів', author: 'Олівер Беркеман', tags: ['productivity', 'philosophy', 'self-help'] },
-  { title: 'Стрімголов: історія одного життя', author: 'Олівер Сакс', tags: ['memoir', 'science', 'neuroscience'] },
+  { title: 'Extremely Loud & Incredibly Close', author: 'Jonathan Safran Foer', tags: ['fiction', 'literature'] },
+  { title: 'A Good Marriage', author: 'Kimberly McCreight', tags: ['fiction', 'thriller'] },
+  { title: 'Caste', author: 'Isabel Wilkerson', tags: ['sociology', 'history', 'politics'] },
+  { title: "A Killer's Mind", author: 'Mike Omer', tags: ['fiction', 'thriller'] },
+  { title: 'Fried Green Tomatoes at the Whistle Stop Cafe', author: 'Fannie Flagg', tags: ['fiction', 'classic'] },
+  { title: 'The Sanatorium', author: 'Sarah Pearse', tags: ['fiction', 'thriller'] },
+  { title: 'Four Thousand Weeks', author: 'Oliver Burkeman', tags: ['productivity', 'philosophy', 'self-help'] },
+  { title: 'On the Move', author: 'Oliver Sacks', tags: ['memoir', 'science', 'neuroscience'] },
   { title: 'Книга в камені', author: 'Юрій Даценко', tags: ['Ukrainian literature', 'history'] },
   { title: 'The Innovators', author: 'Walter Isaacson', tags: ['biography', 'technology', 'history'] },
+  { title: 'Einstein: His Life and Universe', author: 'Walter Isaacson', tags: ['biography', 'science', 'physics'] },
+  { title: 'Benjamin Franklin: An American Life', author: 'Walter Isaacson', tags: ['biography', 'history'] },
   { title: 'Elon Musk', author: 'Ashlee Vance', tags: ['biography', 'technology', 'business'] },
   { title: 'Bill Gates: Source Code', author: 'Various', tags: ['biography', 'technology'] },
   { title: 'Broken Code', author: 'Jeff Horwitz', tags: ['technology', 'social media', 'investigative'] },
-  { title: 'Моє життя та робота', author: 'Генрі Форд', tags: ['biography', 'business', 'classic'] },
+  { title: 'My Life and Work', author: 'Henry Ford', tags: ['biography', 'business', 'classic'] },
   { title: 'The Everything Store', author: 'Brad Stone', tags: ['biography', 'business', 'technology'] },
-  { title: 'Переломний рік', author: 'Бріанна Вієст', tags: ['self-help', 'philosophy'] },
-  { title: 'Мрії мого батька', author: 'Барак Обама', tags: ['memoir', 'politics'] },
-  { title: 'Нові стоїки', author: 'Массімо Пільюччі & Ґреґорі Лопез', tags: ['philosophy', 'Stoicism', 'self-help'] },
-  { title: 'Netflix і культура інновацій', author: 'Рід Гастінгс & Ерін Меєр', tags: ['business', 'leadership', 'management'] },
-  { title: 'Людина, яка померла двічі', author: 'Річард Осман', tags: ['fiction', 'mystery'] },
-  { title: 'Tesla: Винахідник сучасності', author: 'Річард Мансон', tags: ['biography', 'science', 'technology'] },
+  { title: 'The Pivot Year', author: 'Brianna Wiest', tags: ['self-help', 'philosophy'] },
+  { title: 'Dreams from My Father', author: 'Barack Obama', tags: ['memoir', 'politics'] },
+  { title: 'A Handbook for New Stoics', author: 'Massimo Pigliucci & Gregory Lopez', tags: ['philosophy', 'Stoicism', 'self-help'] },
+  { title: 'No Rules Rules', author: 'Reed Hastings & Erin Meyer', tags: ['business', 'leadership', 'management'] },
+  { title: 'The Man Who Died Twice', author: 'Richard Osman', tags: ['fiction', 'mystery'] },
+  { title: 'Tesla', author: 'Richard Munson', tags: ['biography', 'science', 'technology'] },
   { title: 'Не озирайся і мовчи', author: 'Макс Кідрук', tags: ['fiction', 'Ukrainian literature', 'thriller'] },
   { title: 'Таємниця старого Лами', author: 'Дорж Бату', tags: ['fiction', 'spirituality'] },
-  { title: 'Діалоги', author: 'Платон', tags: ['philosophy', 'classic'] },
-  { title: 'Таємнича історія Біллі Міллігана', author: 'Деніел Кіз', tags: ['psychology', 'biography'] },
+  { title: 'Dialogues', author: 'Plato', tags: ['philosophy', 'classic'] },
+  { title: 'The Minds of Billy Milligan', author: 'Daniel Keyes', tags: ['psychology', 'biography'] },
   { title: 'Testing with Humans', author: 'Giff Constable & Frank Rimalovski', tags: ['product', 'startups', 'design'] },
   { title: 'The War for Reality', author: 'Dmytro Kuleba', tags: ['politics', 'geopolitics', 'Ukraine'] },
-  { title: 'Грішна', author: 'Тесс Ґеррітсен', tags: ['fiction', 'thriller'] },
+  { title: 'The Sinner', author: 'Tess Gerritsen', tags: ['fiction', 'thriller'] },
   { title: 'Dunbar', author: 'Edward St Aubyn', tags: ['fiction', 'literature'] },
-  { title: 'Діви', author: 'Алекс Міхаелідес', tags: ['fiction', 'thriller', 'mystery'] },
-  { title: 'Думати, як Зигмунд Фрейд', author: 'Деніел Сміт', tags: ['psychology', 'philosophy'] },
-  { title: 'Блокчейн-революція', author: 'Дон Тапскотт & Алекс Тапскотт', tags: ['technology', 'finance', 'business'] },
-  { title: 'Бог завжди подорожує інкогніто', author: 'Лоран Ґунель', tags: ['fiction', 'self-help'] },
-  { title: 'Есенціалізм', author: 'Ґреґ МакКіон', tags: ['productivity', 'self-help', 'business'] },
-  { title: 'Черчилль і Орвелл', author: 'Томас Рікс', tags: ['biography', 'history', 'politics'] },
-  { title: 'Список запрошених', author: 'Люсі Фолі', tags: ['fiction', 'thriller', 'mystery'] },
-  { title: '48 законів влади', author: 'Роберт Ґрін', tags: ['psychology', 'politics', 'self-help'] },
-  { title: 'Пікассо: живопис, що шокував світ', author: 'Майлз Дж. Ангер', tags: ['biography', 'art'] },
+  { title: 'The Maidens', author: 'Alex Michaelides', tags: ['fiction', 'thriller', 'mystery'] },
+  { title: 'How to Think Like Sigmund Freud', author: 'Daniel Smith', tags: ['psychology', 'philosophy'] },
+  { title: 'Blockchain Revolution', author: 'Don Tapscott & Alex Tapscott', tags: ['technology', 'finance', 'business'] },
+  { title: 'God Always Travels Incognito', author: 'Laurent Gounelle', tags: ['fiction', 'self-help'] },
+  { title: 'Essentialism', author: 'Greg McKeown', tags: ['productivity', 'self-help', 'business'] },
+  { title: 'Churchill and Orwell', author: 'Thomas E. Ricks', tags: ['biography', 'history', 'politics'] },
+  { title: 'The Guest List', author: 'Lucy Foley', tags: ['fiction', 'thriller', 'mystery'] },
+  { title: 'The 48 Laws of Power', author: 'Robert Greene', tags: ['psychology', 'politics', 'self-help'] },
+  { title: 'Picasso and the Painting That Shocked the World', author: 'Miles J. Unger', tags: ['biography', 'art'] },
   { title: 'Tribe of Mentors', author: 'Tim Ferriss', tags: ['self-help', 'interviews', 'business'] },
   { title: 'Will', author: 'Will Smith & Mark Manson', tags: ['memoir', 'entertainment'] },
   { title: 'Nine Perfect Strangers', author: 'Liane Moriarty', tags: ['fiction', 'thriller'] },
-  { title: 'Правила гри', author: 'Ніл Стросс', tags: ['self-help', 'psychology'] },
-  { title: 'Філософія: 50 видатних творів', author: 'Том Батлер-Боудон', tags: ['philosophy', 'reference'] },
+  { title: 'The Game', author: 'Neil Strauss', tags: ['self-help', 'psychology'] },
+  { title: '50 Philosophy Classics', author: 'Tom Butler-Bowdon', tags: ['philosophy', 'reference'] },
   { title: 'The Ultimate Finance Book', author: 'Roger Mason et al.', tags: ['finance', 'education'] },
-  { title: '250 фішок для письменників', author: 'Чак Вендіг', tags: ['writing', 'reference'] },
+  { title: '250 Things You Should Know About Writing', author: 'Chuck Wendig', tags: ['writing', 'reference'] },
   { title: 'The Club: Мистецтво об\'єднувати', author: 'Сергій Гайдай', tags: ['Ukrainian literature', 'business'] },
-  { title: 'Автобіографія', author: 'Ендрю Карнегі', tags: ['biography', 'business', 'classic'] },
+  { title: 'Autobiography of Andrew Carnegie', author: 'Andrew Carnegie', tags: ['biography', 'business', 'classic'] },
   { title: 'A Storm of Swords', author: 'George R. R. Martin', tags: ['fiction', 'fantasy'] },
-  { title: 'Монах, який продав свій «Ferrari»', author: 'Робін Шарма', tags: ['self-help', 'fiction', 'philosophy'] },
+  { title: 'The Monk Who Sold His Ferrari', author: 'Robin Sharma', tags: ['self-help', 'fiction', 'philosophy'] },
   { title: 'Справа Василя Стуса', author: 'Вахтанг Кіпіані', tags: ['Ukrainian literature', 'history', 'politics'] },
   { title: 'Steve Jobs', author: 'Walter Isaacson', tags: ['biography', 'technology', 'business'] },
-  { title: '101 есеїв, які змінять ваше мислення', author: 'Бріанна Вієст', tags: ['self-help', 'essays', 'philosophy'] },
+  { title: '101 Essays That Will Change the Way You Think', author: 'Brianna Wiest', tags: ['self-help', 'essays', 'philosophy'] },
   { title: 'An Elegant Puzzle', author: 'Will Larson', tags: ['software engineering', 'management', 'leadership'] },
   { title: 'Never Split the Difference', author: 'Chris Voss & Tahl Raz', tags: ['negotiation', 'business', 'psychology'] },
   { title: "Poor Charlie's Almanack", author: 'Peter D. Kaufman (ed.)', tags: ['investing', 'wisdom', 'business'] },
@@ -347,17 +355,262 @@ const physicalBooks = [
   { title: 'The Art of Doing Science and Engineering', author: 'Richard W. Hamming', tags: ['science', 'engineering', 'education'] },
   { title: 'The Big Score', author: 'Michael S. Malone', tags: ['technology', 'history', 'business'] },
   { title: 'The Intelligent Investor', author: 'Benjamin Graham', tags: ['investing', 'finance', 'classic'] },
+  { title: 'The Man Who Knew Infinity', author: 'Robert Kanigel', tags: ['biography', 'mathematics'] },
+  { title: 'Deep Simplicity', author: 'John Gribbin', tags: ['science', 'complexity'] },
   { title: 'The Long Walk', author: 'Stephen King', tags: ['fiction', 'dystopia'] },
   { title: 'The Making of Prince of Persia', author: 'Jordan Mechner', tags: ['memoir', 'game design', 'technology'] },
+  { title: 'Meeting Life', author: 'Jiddu Krishnamurti', tags: ['philosophy', 'spirituality'] },
+  { title: 'Ostatni Naboj', author: 'Unknown Author', tags: ['Polish'] },
   { title: 'The Power of Now', author: 'Eckhart Tolle', tags: ['spirituality', 'self-help', 'mindfulness'] },
   { title: 'The Snowball', author: 'Alice Schroeder', tags: ['biography', 'investing', 'business'] },
   { title: 'Winston Churchill CEO', author: 'Alan Axelrod', tags: ['biography', 'leadership', 'history'] },
   { title: 'Білий попіл', author: 'Іларіон Павлюк', tags: ['fiction', 'Ukrainian literature'] },
-  { title: 'На Західному фронті без змін', author: 'Еріх Марія Ремарк', tags: ['fiction', 'war', 'classic'] },
-  { title: 'Емоція за дизайном', author: 'Ґреґ Гоффман', tags: ['design', 'business', 'marketing'] },
-  { title: 'Сяйво', author: 'Стівен Кінг', tags: ['fiction', 'horror', 'classic'] },
+  { title: 'All Quiet on the Western Front', author: 'Erich Maria Remarque', tags: ['fiction', 'war', 'classic'] },
+  { title: 'Emotion by Design', author: 'Greg Hoffman', tags: ['design', 'business', 'marketing'] },
+  { title: 'The Shining', author: 'Stephen King', tags: ['fiction', 'horror', 'classic'] },
   { title: 'Як перекласти життя на сценарій', author: 'Антоніо Лукіч', tags: ['Ukrainian literature', 'film', 'memoir'] },
 ];
+
+const screenshotBooks = [
+  { title: 'The Humane Interface', author: 'Jef Raskin', tags: ['design', 'technology', 'software'] },
+  { title: 'Atomic Accidents', author: 'James Mahaffey', tags: ['history', 'science', 'nuclear'] },
+  { title: 'The Overstory', author: 'Richard Powers', tags: ['fiction', 'nature', 'literature'] },
+  { title: 'Turn the Ship Around!', author: 'L. David Marquet', tags: ['leadership', 'management'] },
+  { title: 'Queen of Scots', author: 'John Guy', tags: ['history', 'biography'] },
+  { title: 'Czarny kot', author: 'Edgar Allan Poe', tags: ['fiction', 'classic', 'Polish'] },
+  { title: 'Mały Książę', author: 'Antoine de Saint-Exupéry', tags: ['fiction', 'classic', 'Polish'] },
+  { title: 'Alicja w Krainie Czarów', author: 'Lewis Carroll', tags: ['fiction', 'classic', 'Polish'] },
+  { title: 'Robinson Crusoe', author: 'Daniel Defoe', tags: ['fiction', 'classic'] },
+  { title: 'Don Kichot z La Manchy', author: 'Miguel de Cervantes Saavedra', tags: ['fiction', 'classic', 'Polish'] },
+  { title: 'Italy', author: 'Ross King', tags: ['history', 'travel'] },
+  { title: 'The Struggle for Taiwan', author: 'Sulmaan Wasif Khan', tags: ['history', 'geopolitics'] },
+  { title: 'The Journey of Leadership', author: 'Dana Maor, Hans-Werner Kaas, Kurt Strovink & Ramesh Srinivasan', tags: ['leadership', 'business'] },
+  { title: 'Surrounded by Idiots', author: 'Thomas Erikson', tags: ['psychology', 'communication'] },
+  { title: 'Extraordinary Popular Delusions and the Madness of Crowds', author: 'Charles Mackay', tags: ['psychology', 'history', 'finance'] },
+  { title: 'Napoleon', author: 'Philip Dwyer', tags: ['history', 'biography'] },
+  { title: 'The Path to Power', author: 'Robert A. Caro', tags: ['biography', 'politics'] },
+  { title: 'The Dhandho Investor', author: 'Mohnish Pabrai', tags: ['investing', 'finance'] },
+  { title: 'An Autobiography', author: 'M. K. Gandhi', tags: ['memoir', 'history'] },
+  { title: 'Long Walk to Freedom', author: 'Nelson Mandela', tags: ['memoir', 'history', 'politics'] },
+  { title: 'Margaret Thatcher: The Autobiography', author: 'Margaret Thatcher', tags: ['memoir', 'politics'] },
+  { title: 'Myśli', author: 'Blaise Pascal', tags: ['philosophy', 'classic', 'Polish'] },
+  { title: 'Crossing the Chasm', author: 'Geoffrey A. Moore', tags: ['business', 'marketing', 'startups'] },
+  { title: 'Obviously Awesome', author: 'April Dunford', tags: ['marketing', 'product', 'business'] },
+  { title: 'Product-Led Growth', author: 'Wes Bush', tags: ['product', 'business', 'growth'] },
+  { title: 'University of Berkshire Hathaway', author: 'Daniel Pecaut & Corey Wrenn', tags: ['investing', 'business'] },
+  { title: 'The Work of Art in the Age of Mechanical Reproduction', author: 'Walter Benjamin', tags: ['philosophy', 'art', 'essays'] },
+  { title: 'Atomic Habits', author: 'James Clear', tags: ['self-help', 'productivity'] },
+  { title: 'Quo Vadis', author: 'Henryk Sienkiewicz', tags: ['fiction', 'classic', 'Polish'] },
+  { title: 'Crucible Moments', author: 'Sequoia Capital', tags: ['startups', 'business'] },
+  { title: 'The Power Law', author: 'Sebastian Mallaby', tags: ['venture capital', 'business', 'technology'] },
+  { title: 'Venture Capitalists at Work', author: 'Tarang Shah', tags: ['venture capital', 'interviews', 'business'] },
+  { title: "Sid Meier's Memoir!", author: 'Sid Meier', tags: ['memoir', 'game design', 'technology'] },
+  { title: "Liar's Poker", author: 'Michael Lewis', tags: ['finance', 'memoir'] },
+  { title: 'How to Become a Straight-A Student', author: 'Cal Newport', tags: ['education', 'productivity'] },
+  { title: 'Creative Selection', author: 'Ken Kocienda', tags: ['technology', 'design', 'memoir'] },
+  { title: 'Working', author: 'Robert A. Caro', tags: ['writing', 'memoir'] },
+  { title: 'Algorithms to Live By', author: 'Brian Christian & Tom Griffiths', tags: ['computer science', 'psychology', 'decision making'] },
+  { title: 'The Systems Bible', author: 'John Gall', tags: ['systems', 'science', 'management'] },
+  { title: 'The Art of Statistics', author: 'David Spiegelhalter', tags: ['statistics', 'science'] },
+  { title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', tags: ['psychology', 'decision making', 'economics'] },
+  { title: 'The Stranger', author: 'Albert Camus', tags: ['fiction', 'philosophy', 'classic'] },
+  { title: 'Meditations', author: 'Marcus Aurelius', tags: ['philosophy', 'Stoicism', 'classic'] },
+  { title: "Dead Man's Walk", author: 'Larry McMurtry', tags: ['fiction', 'western'] },
+  { title: 'City', author: 'David Macaulay', tags: ['architecture', 'history', 'design'] },
+  { title: 'The New Way Things Work', author: 'David Macaulay', tags: ['engineering', 'science', 'design'] },
+  { title: 'Born of This Land: My Life Story', author: 'Chung Ju-yung', tags: ['memoir', 'business'] },
+  { title: '100 Books That Changed the World', author: 'Scott Christianson & Colin Salter', tags: ['history', 'books'] },
+  { title: 'Sam Altman', author: 'Various', tags: ['technology', 'startups', 'AI'] },
+  { title: 'M Train', author: 'Patti Smith', tags: ['memoir', 'art'] },
+  { title: 'Adventures of Huckleberry Finn', author: 'Mark Twain', tags: ['fiction', 'classic'] },
+  { title: 'Pride In Performance Keep It Going!', author: 'Les Schwab', tags: ['business', 'memoir'] },
+  { title: 'Influence', author: 'Robert B. Cialdini', tags: ['psychology', 'business', 'persuasion'] },
+  { title: 'Richest Man in Babylon', author: 'George S. Clason', tags: ['finance', 'self-help', 'classic'] },
+  { title: 'The Wealth and Poverty of Nations', author: 'David S. Landes', tags: ['history', 'economics'] },
+  { title: 'Master of the Game', author: 'Connie Bruck', tags: ['biography', 'business'] },
+  { title: 'Models of My Life', author: 'Herbert A. Simon', tags: ['memoir', 'science', 'decision making'] },
+  { title: 'Judgment in Managerial Decision Making', author: 'Max H. Bazerman & Don A. Moore', tags: ['business', 'decision making', 'psychology'] },
+  { title: 'In the Plex', author: 'Steven Levy', tags: ['technology', 'business'] },
+  { title: 'Ice Age', author: 'Unknown Author', tags: ['science', 'history'] },
+  { title: 'How the Scots Invented the Modern World', author: 'Arthur Herman', tags: ['history'] },
+  { title: 'Genome', author: 'Matt Ridley', tags: ['science', 'biology'] },
+  { title: 'The Blind Watchmaker', author: 'Richard Dawkins', tags: ['science', 'biology', 'evolution'] },
+  { title: 'A World Appears', author: 'Michael Pollan', tags: ['science', 'consciousness'] },
+  { title: 'Right Thing, Right Now', author: 'Ryan Holiday', tags: ['philosophy', 'Stoicism'] },
+  { title: 'Naked Statistics', author: 'Charles Wheelan', tags: ['statistics', 'economics'] },
+  { title: 'Guns, Germs, and Steel', author: 'Jared Diamond', tags: ['history', 'science'] },
+  { title: 'Know Yourself', author: 'The School of Life', tags: ['philosophy', 'psychology'] },
+  { title: 'The Heart of the Photograph', author: 'David duChemin', tags: ['photography', 'art'] },
+  { title: '13.8', author: 'John Gribbin', tags: ['science', 'physics'] },
+  { title: 'The Fellowship', author: 'John Gribbin', tags: ['science', 'history'] },
+  { title: 'Seven Pillars of Science', author: 'John Gribbin', tags: ['science'] },
+  { title: "In Search of Schrodinger's Cat", author: 'John Gribbin', tags: ['science', 'physics'] },
+  { title: 'Six Impossible Things', author: 'John Gribbin', tags: ['science', 'physics'] },
+  { title: 'In Search of the Multiverse', author: 'John Gribbin', tags: ['science', 'physics'] },
+  { title: 'The Reason Why', author: 'John Gribbin', tags: ['science', 'history'] },
+  { title: 'Richard Feynman: A Life in Science', author: 'John Gribbin & Mary Gribbin', tags: ['biography', 'science'] },
+  { title: 'Stephen Hawking: A Life in Science', author: 'Michael White & John Gribbin', tags: ['biography', 'science'] },
+  { title: 'In Search of the Big Bang', author: 'John Gribbin', tags: ['science', 'physics'] },
+  { title: "Einstein's Masterwork", author: 'John Gribbin', tags: ['science', 'physics'] },
+  { title: 'Deep Simplicity', author: 'John Gribbin', tags: ['science', 'complexity'] },
+  { title: 'Science: A History', author: 'John Gribbin', tags: ['science', 'history'] },
+  { title: 'Richard Wagner: Volume One', author: 'Richard Wagner', tags: ['music', 'biography'] },
+  { title: "Twenty Years of Hus'ling", author: 'J. P. Johnston', tags: ['memoir', 'business'] },
+  { title: 'The Works of Mr. George Gillespie (Vol. 1 of 2)', author: 'George Gillespie', tags: ['religion', 'classic'] },
+  { title: 'The Life of Charles Dickens, Vol. III', author: 'John Forster', tags: ['biography', 'literature'] },
+  { title: 'Concrete Construction: Methods and Costs', author: 'Halbert Powers Gillette & Charles Shattuck Hill', tags: ['engineering', 'construction'] },
+  { title: 'Moby Dick', author: 'Herman Melville', tags: ['fiction', 'classic'] },
+  { title: 'Psychology of the Unconscious', author: 'C. G. Jung', tags: ['psychology', 'classic'] },
+  { title: 'Limping on Water', author: 'Phil Beuth', tags: ['business', 'memoir'] },
+  { title: 'Happy City', author: 'Charles Montgomery', tags: ['urban studies', 'design'] },
+  { title: 'The Seven Habits of Highly Effective People', author: 'Stephen R. Covey', tags: ['self-help', 'business'] },
+  { title: 'Start Small, Stay Small', author: 'Rob Walling', tags: ['startups', 'business'] },
+  { title: 'Chaos Monkeys', author: 'Antonio Garcia Martinez', tags: ['technology', 'startups', 'memoir'] },
+  { title: 'Martyr!', author: 'Kaveh Akbar', tags: ['fiction', 'literature'] },
+  { title: 'Theo of Golden', author: 'Allen Levi', tags: ['fiction'] },
+  { title: 'The Correspondent', author: 'Virginia Evans', tags: ['fiction'] },
+  { title: "Structures: Or Why Things Don't Fall Down", author: 'J. E. Gordon', tags: ['engineering', 'design'] },
+  { title: 'Days at the Morisaki Bookshop', author: 'Satoshi Yagisawa', tags: ['fiction', 'Japanese literature'] },
+  { title: 'Idealna żona', author: 'Blake Pierce', tags: ['fiction', 'thriller', 'Polish'] },
+  { title: 'Agee', author: 'James Agee', tags: ['literature'] },
+  { title: 'Team of Teams', author: 'General Stanley McChrystal', tags: ['leadership', 'management'] },
+  { title: 'Once Upon Atari', author: 'Howard Scott Warshaw', tags: ['technology', 'game design', 'memoir'] },
+  { title: 'The Soul of a New Machine', author: 'Tracy Kidder', tags: ['technology', 'history'] },
+  { title: 'A Year with Swollen Appendices', author: 'Brian Eno', tags: ['memoir', 'music', 'art'] },
+  { title: 'Revolution in The Valley', author: 'Andy Hertzfeld', tags: ['technology', 'history'] },
+  { title: 'The Making of Karateka Journals', author: 'Jordan Mechner', tags: ['game design', 'technology', 'memoir'] },
+  { title: 'The Little Book of Common Sense Investing', author: 'John C. Bogle', tags: ['investing', 'finance'] },
+  { title: 'John Maynard Keynes: Essays in Persuasion', author: 'John Maynard Keynes', tags: ['economics', 'essays'] },
+  { title: 'The Clash of the Cultures', author: 'John C. Bogle', tags: ['investing', 'finance'] },
+  { title: 'Stress Test', author: 'Timothy F. Geithner', tags: ['finance', 'memoir'] },
+  { title: 'Jack: Straight from the Gut', author: 'Jack Welch', tags: ['memoir', 'business'] },
+  { title: 'Security Analysis', author: 'Benjamin Graham & David L. Dodd', tags: ['investing', 'finance'] },
+  { title: 'Common Stocks and Uncommon Profits', author: 'Philip A. Fisher', tags: ['investing', 'finance'] },
+  { title: 'Dream Big', author: 'Cristiane Correa', tags: ['business', 'biography'] },
+  { title: 'The Anatomy of Story', author: 'John Truby', tags: ['writing', 'storytelling'] },
+  { title: 'What I Learned About Investing from Darwin', author: 'Pulak Prasad', tags: ['investing', 'finance'] },
+  { title: 'Warren Buffett and the Interpretation of Financial Statements', author: 'Mary Buffett & David Clark', tags: ['investing', 'finance'] },
+  { title: 'Economics in One Lesson', author: 'Henry Hazlitt', tags: ['economics', 'classic'] },
+  { title: 'Great Thinkers', author: 'The School of Life', tags: ['philosophy', 'history'] },
+  { title: 'Company of One', author: 'Paul Jarvis', tags: ['business', 'entrepreneurship'] },
+  { title: 'You Can Be a Stock Market Genius', author: 'Joel Greenblatt', tags: ['investing', 'finance'] },
+  { title: 'The Little Book That Still Beats the Market', author: 'Joel Greenblatt', tags: ['investing', 'finance'] },
+  { title: "Nick and Zak's Adventures in Capitalism", author: 'The Rational Clown', tags: ['investing', 'finance'] },
+  { title: 'Mastering the Market Cycle', author: 'Howard Marks', tags: ['investing', 'finance'] },
+  { title: '100 Baggers', author: 'Christopher W. Mayer', tags: ['investing', 'finance'] },
+  { title: 'Same as Ever', author: 'Morgan Housel', tags: ['finance', 'psychology', 'history'] },
+  { title: 'Founding Sales', author: 'Peter Kazanjy', tags: ['sales', 'startups', 'business'] },
+  { title: 'Stop Asking Questions', author: 'Unknown', tags: ['self-help'] },
+  { title: 'The Abolition of Man', author: 'C. S. Lewis', tags: ['philosophy', 'classic'] },
+  { title: 'Self-Editing for Fiction Writers', author: 'Renni Browne & Dave King', tags: ['writing', 'fiction'] },
+  { title: "The Writer's Journey", author: 'Christopher Vogler', tags: ['writing', 'storytelling'] },
+  { title: 'Bird by Bird', author: 'Anne Lamott', tags: ['writing', 'memoir'] },
+  { title: 'Story Genius', author: 'Lisa Cron', tags: ['writing', 'storytelling'] },
+  { title: 'Outstanding Investor Digest', author: 'Various', tags: ['investing', 'finance'] },
+  { title: 'Warren Buffett Partnership Letters: The Complete Collection 1943-1978', author: 'Warren Buffett', tags: ['investing', 'finance'] },
+  { title: 'The Autobiography of Charles Darwin', author: 'Charles Darwin', tags: ['memoir', 'science'] },
+  { title: '150 Great Articles & Essays', author: 'Various', tags: ['essays', 'literature'] },
+  { title: 'Super Thinking', author: 'Gabriel Weinberg & Lauren McCann', tags: ['mental models', 'decision making'] },
+];
+
+const titleCorrections = [
+  { fromTitle: 'Талановитий містер Ріплі', fromAuthor: 'Патриція Гайсміт', title: 'The Talented Mr. Ripley', author: 'Patricia Highsmith' },
+  { fromTitle: 'Воєнні мемуари, Том 1', fromAuthor: 'Шарль де Голль', title: 'War Memoirs, Volume 1', author: 'Charles de Gaulle' },
+  { fromTitle: 'Чайка Джонатан Лівінгстон', fromAuthor: 'Річард Бах', title: 'Jonathan Livingston Seagull', author: 'Richard Bach' },
+  { fromTitle: 'Стрілець', fromAuthor: 'Стівен Кінг', title: 'The Gunslinger', author: 'Stephen King' },
+  { fromTitle: 'Зелена миля', fromAuthor: 'Стівен Кінг', title: 'The Green Mile', author: 'Stephen King' },
+  { fromTitle: 'Страшенно голосно і неймовірно близько', fromAuthor: 'Джонатан Сафран Фоер', title: 'Extremely Loud & Incredibly Close', author: 'Jonathan Safran Foer' },
+  { fromTitle: 'Чудове подружжя', fromAuthor: 'Кімберлі Маккрейт', title: 'A Good Marriage', author: 'Kimberly McCreight' },
+  { fromTitle: 'Каста', fromAuthor: 'Ізабель Вілкерсон', title: 'Caste', author: 'Isabel Wilkerson' },
+  { fromTitle: 'Розум. Убивці', fromAuthor: 'Майк Омер', title: "A Killer's Mind", author: 'Mike Omer' },
+  { fromTitle: 'Смажені зелені помідори в кафе «Зупинка»', fromAuthor: 'Фенні Флегг', title: 'Fried Green Tomatoes at the Whistle Stop Cafe', author: 'Fannie Flagg' },
+  { fromTitle: 'Санаторій', fromAuthor: 'Сара Пірс', title: 'The Sanatorium', author: 'Sarah Pearse' },
+  { fromTitle: '4000 тижнів', fromAuthor: 'Олівер Беркеман', title: 'Four Thousand Weeks', author: 'Oliver Burkeman' },
+  { fromTitle: 'Стрімголов: історія одного життя', fromAuthor: 'Олівер Сакс', title: 'On the Move', author: 'Oliver Sacks' },
+  { fromTitle: 'Моє життя та робота', fromAuthor: 'Генрі Форд', title: 'My Life and Work', author: 'Henry Ford' },
+  { fromTitle: 'Переломний рік', fromAuthor: 'Бріанна Вієст', title: 'The Pivot Year', author: 'Brianna Wiest' },
+  { fromTitle: 'Мрії мого батька', fromAuthor: 'Барак Обама', title: 'Dreams from My Father', author: 'Barack Obama' },
+  { fromTitle: 'Нові стоїки', fromAuthor: 'Массімо Пільюччі & Ґреґорі Лопез', title: 'A Handbook for New Stoics', author: 'Massimo Pigliucci & Gregory Lopez' },
+  { fromTitle: 'Netflix і культура інновацій', fromAuthor: 'Рід Гастінгс & Ерін Меєр', title: 'No Rules Rules', author: 'Reed Hastings & Erin Meyer' },
+  { fromTitle: 'Людина, яка померла двічі', fromAuthor: 'Річард Осман', title: 'The Man Who Died Twice', author: 'Richard Osman' },
+  { fromTitle: 'Tesla: Винахідник сучасності', fromAuthor: 'Річард Мансон', title: 'Tesla', author: 'Richard Munson' },
+  { fromTitle: 'Діалоги', fromAuthor: 'Платон', title: 'Dialogues', author: 'Plato' },
+  { fromTitle: 'Таємнича історія Біллі Міллігана', fromAuthor: 'Деніел Кіз', title: 'The Minds of Billy Milligan', author: 'Daniel Keyes' },
+  { fromTitle: 'Грішна', fromAuthor: 'Тесс Ґеррітсен', title: 'The Sinner', author: 'Tess Gerritsen' },
+  { fromTitle: 'Діви', fromAuthor: 'Алекс Міхаелідес', title: 'The Maidens', author: 'Alex Michaelides' },
+  { fromTitle: 'Думати, як Зигмунд Фрейд', fromAuthor: 'Деніел Сміт', title: 'How to Think Like Sigmund Freud', author: 'Daniel Smith' },
+  { fromTitle: 'Блокчейн-революція', fromAuthor: 'Дон Тапскотт & Алекс Тапскотт', title: 'Blockchain Revolution', author: 'Don Tapscott & Alex Tapscott' },
+  { fromTitle: 'Бог завжди подорожує інкогніто', fromAuthor: 'Лоран Ґунель', title: 'God Always Travels Incognito', author: 'Laurent Gounelle' },
+  { fromTitle: 'Есенціалізм', fromAuthor: 'Ґреґ МакКіон', title: 'Essentialism', author: 'Greg McKeown' },
+  { fromTitle: 'Черчилль і Орвелл', fromAuthor: 'Томас Рікс', title: 'Churchill and Orwell', author: 'Thomas E. Ricks' },
+  { fromTitle: 'Список запрошених', fromAuthor: 'Люсі Фолі', title: 'The Guest List', author: 'Lucy Foley' },
+  { fromTitle: '48 законів влади', fromAuthor: 'Роберт Ґрін', title: 'The 48 Laws of Power', author: 'Robert Greene' },
+  { fromTitle: 'Пікассо: живопис, що шокував світ', fromAuthor: 'Майлз Дж. Ангер', title: 'Picasso and the Painting That Shocked the World', author: 'Miles J. Unger' },
+  { fromTitle: 'Правила гри', fromAuthor: 'Ніл Стросс', title: 'The Game', author: 'Neil Strauss' },
+  { fromTitle: 'Філософія: 50 видатних творів', fromAuthor: 'Том Батлер-Боудон', title: '50 Philosophy Classics', author: 'Tom Butler-Bowdon' },
+  { fromTitle: '250 фішок для письменників', fromAuthor: 'Чак Вендіг', title: '250 Things You Should Know About Writing', author: 'Chuck Wendig' },
+  { fromTitle: 'Автобіографія', fromAuthor: 'Ендрю Карнегі', title: 'Autobiography of Andrew Carnegie', author: 'Andrew Carnegie' },
+  { fromTitle: 'Монах, який продав свій «Ferrari»', fromAuthor: 'Робін Шарма', title: 'The Monk Who Sold His Ferrari', author: 'Robin Sharma' },
+  { fromTitle: '101 есеїв, які змінять ваше мислення', fromAuthor: 'Бріанна Вієст', title: '101 Essays That Will Change the Way You Think', author: 'Brianna Wiest' },
+  { fromTitle: 'На Західному фронті без змін', fromAuthor: 'Еріх Марія Ремарк', title: 'All Quiet on the Western Front', author: 'Erich Maria Remarque' },
+  { fromTitle: 'Емоція за дизайном', fromAuthor: 'Ґреґ Гоффман', title: 'Emotion by Design', author: 'Greg Hoffman' },
+  { fromTitle: 'Сяйво', fromAuthor: 'Стівен Кінг', title: 'The Shining', author: 'Stephen King' },
+];
+
+function normalizeKeyPart(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getBookKey(book) {
+  return `${normalizeKeyPart(book.title)}::${normalizeKeyPart(book.author)}`;
+}
+
+function mergeTags(...tagSets) {
+  const seenTags = new Set();
+  const mergedTags = [];
+
+  for (const tagSet of tagSets) {
+    for (const tag of tagSet || []) {
+      const normalizedTag = String(tag).trim();
+      const tagKey = normalizedTag.toLowerCase();
+
+      if (!normalizedTag || seenTags.has(tagKey)) {
+        continue;
+      }
+
+      seenTags.add(tagKey);
+      mergedTags.push(normalizedTag);
+    }
+  }
+
+  return mergedTags;
+}
+
+function normalizeTagsForCompare(tags) {
+  return (tags || [])
+    .map((tag) => String(tag).trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join('\n');
+}
+
+function applyTitleCorrection(book) {
+  const correction = titleCorrections.find((candidate) => (
+    normalizeKeyPart(candidate.fromTitle) === normalizeKeyPart(book.title)
+    && normalizeKeyPart(candidate.fromAuthor) === normalizeKeyPart(book.author)
+  ));
+
+  if (!correction) {
+    return book;
+  }
+
+  return {
+    ...book,
+    title: correction.title,
+    author: correction.author,
+    tags: mergeTags(book.tags, correction.tags),
+  };
+}
 
 async function seed() {
   await ensureDatabase();
@@ -365,15 +618,87 @@ async function seed() {
   const allBooks = [
     ...onlineBooks.map((b) => ({ ...b, isOnline: true })),
     ...physicalBooks.map((b) => ({ ...b, isOnline: false })),
-  ];
-
-  console.log(`Seeding ${allBooks.length} books (${onlineBooks.length} online, ${physicalBooks.length} physical)...`);
-  let created = 0;
-  let errors = 0;
+    ...screenshotBooks.map((b) => ({ ...b, isOnline: false })),
+  ].map(applyTitleCorrection);
+  const booksByKey = new Map();
 
   for (const book of allBooks) {
+    const bookKey = getBookKey(book);
+    const existingBook = booksByKey.get(bookKey);
+
+    booksByKey.set(bookKey, existingBook
+      ? { ...book, tags: mergeTags(existingBook.tags, book.tags) }
+      : book);
+  }
+
+  const desiredBooks = Array.from(booksByKey.values());
+
+  console.log(`Seeding ${desiredBooks.length} unique books from ${allBooks.length} records (${onlineBooks.length} online, ${physicalBooks.length} physical, ${screenshotBooks.length} screenshots)...`);
+  const existingEntries = await getBookshelfEntries({ includeInternalNotes: true });
+  let corrected = 0;
+
+  for (const entry of existingEntries) {
+    const correctedEntry = applyTitleCorrection(entry);
+
+    if (getBookKey(correctedEntry) === getBookKey(entry)) {
+      continue;
+    }
+
+    const existingTarget = existingEntries.find((candidate) => (
+      candidate.id !== entry.id && getBookKey(candidate) === getBookKey(correctedEntry)
+    ));
+
+    if (existingTarget) {
+      continue;
+    }
+
+    await updateBookshelfEntry(entry.id, {
+      title: correctedEntry.title,
+      author: correctedEntry.author,
+      tags: mergeTags(entry.tags, correctedEntry.tags),
+      internalNotes: entry.internalNotes || '',
+    });
+    corrected++;
+  }
+
+  const entriesAfterCorrections = corrected > 0
+    ? await getBookshelfEntries({ includeInternalNotes: true })
+    : existingEntries;
+  const existingByKey = new Map(entriesAfterCorrections.map((entry) => [getBookKey(entry), entry]));
+  let created = 0;
+  let skipped = 0;
+  let updated = 0;
+  let errors = 0;
+
+  for (const book of desiredBooks) {
+    const bookKey = getBookKey(book);
+    const existingEntry = existingByKey.get(bookKey);
+
+    if (existingEntry) {
+      const mergedTags = mergeTags(existingEntry.tags, book.tags);
+      const shouldUpdate = existingEntry.isOnline !== book.isOnline
+        || normalizeTagsForCompare(existingEntry.tags) !== normalizeTagsForCompare(mergedTags);
+
+      if (shouldUpdate) {
+        const updatedEntry = await updateBookshelfEntry(existingEntry.id, {
+          isOnline: book.isOnline,
+          tags: mergedTags,
+          internalNotes: existingEntry.internalNotes || '',
+        });
+        existingByKey.set(bookKey, updatedEntry || {
+          ...existingEntry,
+          isOnline: book.isOnline,
+          tags: mergedTags,
+        });
+        updated++;
+      }
+
+      skipped++;
+      continue;
+    }
+
     try {
-      await createBookshelfEntry({
+      const createdEntry = await createBookshelfEntry({
         title: book.title,
         author: book.author,
         status: 'backlog',
@@ -382,6 +707,7 @@ async function seed() {
         sortOrder: 0,
         tags: book.tags,
       });
+      existingByKey.set(bookKey, createdEntry);
       created++;
       if (created % 25 === 0) {
         console.log(`  ...created ${created} books`);
@@ -392,11 +718,12 @@ async function seed() {
     }
   }
 
-  console.log(`\nDone. Created: ${created}, Errors: ${errors}`);
-  process.exit(0);
+  console.log(`\nDone. Corrected: ${corrected}, Updated: ${updated}, Created: ${created}, Skipped: ${skipped}, Errors: ${errors}`);
+  await closePool();
+  process.exit(errors > 0 ? 1 : 0);
 }
 
 seed().catch((err) => {
   console.error('Seed failed:', err);
-  process.exit(1);
+  closePool().finally(() => process.exit(1));
 });

@@ -1,17 +1,17 @@
 import BooksYearSection from './BooksYearSection';
 
 const books = [
-    { year: 2025, title: 'Heart-Led Leadership (eng)', author: 'Tommy Spaulding' },
-    { year: 2025, title: 'The Five Temptations of a CEO (eng)', author: 'Patrick Lencioni' },
-    { year: 2025, title: 'Educated (ukr)', author: 'Tara Westover' },
-    { year: 2025, title: '🔥 The Minds of Billy Milligan (ukr)', author: 'Daniel Keyes' },
-    { year: 2025, title: 'Fooled by Randomness (eng, 1/2)', author: 'Nassim Nicholas Taleb' },
-    { year: 2025, title: '🔥 Hell Yeah or No (eng)', author: 'Derek Sivers' },
-    { year: 2025, title: '🔥 Traces on the Road (ukr)', author: 'Valerii Markus' },
-    { year: 2025, title: 'The Gunslinger (The Dark Tower I) (ukr)', author: 'Stephen King' },
+    { year: 2025, title: 'Heart-Led Leadership', author: 'Tommy Spaulding' },
+    { year: 2025, title: 'The Five Temptations of a CEO', author: 'Patrick Lencioni' },
+    { year: 2025, title: 'Освічена', author: 'Tara Westover' },
+    { year: 2025, title: '🔥 Таємнича історія Біллі Міллігана', author: 'Daniel Keyes' },
+    { year: 2025, title: 'Fooled by Randomness (1/2)', author: 'Nassim Nicholas Taleb' },
+    { year: 2025, title: '🔥 Hell Yeah or No', author: 'Derek Sivers' },
+    { year: 2025, title: '🔥 Сліди на дорозі', author: 'Valerii Markus' },
+    { year: 2025, title: 'Стрілець (Темна вежа I)', author: 'Stephen King' },
     {
         year: 2025,
-        title: '🔥 The Almanack of Naval Ravikant (eng)',
+        title: '🔥 The Almanack of Naval Ravikant',
         author: 'Eric Jorgenson',
         slug: 'the-almanack-of-naval-ravikant-eng',
         summary:
@@ -37,15 +37,15 @@ const books = [
             `p.s. i first read the free online version on my tablet\n` +
             `then i got the paperback from Bohdan Mykhailiv (thanks 🙌)`,
     },
-    { year: 2025, title: 'White Ash (ukr)', author: 'Illarion Pavliuk' },
-    { year: 2025, title: '🔥 Start with Why (eng)', author: 'Simon Sinek' },
-    { year: 2025, title: '🔥 This Is Marketing (eng)', author: 'Seth Godin' },
-    { year: 2025, title: 'The Fury (ukr)', author: 'Alex Michaelides' },
-    { year: 2025, title: 'The Innovators (ukr)', author: 'Walter Isaacson' },
-    { year: 2025, title: 'The Long Walk (ukr)', author: 'Stephen King' },
-    { year: 2025, title: 'Trillion Dollar Coach (ukr)', author: 'Eric Schmidt, Jonathan Rosenberg, Alan Eagle' },
-    { year: 2025, title: '🔥 How to Build a Billion Dollar Company (eng)', author: 'Guillaume Moubeche' },
-    { year: 2025, title: 'Five Quarters of the Orange (ukr)', author: 'Joanne Harris' },
+    { year: 2025, title: 'Білий попіл', author: 'Illarion Pavliuk' },
+    { year: 2025, title: '🔥 Start with Why', author: 'Simon Sinek' },
+    { year: 2025, title: '🔥 This Is Marketing', author: 'Seth Godin' },
+    { year: 2025, title: 'Лють', author: 'Alex Michaelides' },
+    { year: 2025, title: 'Інноватори', author: 'Walter Isaacson' },
+    { year: 2025, title: 'Довга хода', author: 'Stephen King' },
+    { year: 2025, title: 'Тренер на трильйон доларів', author: 'Eric Schmidt, Jonathan Rosenberg, Alan Eagle' },
+    { year: 2025, title: '🔥 How to Build a Billion Dollar Company', author: 'Guillaume Moubeche' },
+    { year: 2025, title: "П'ять четвертинок апельсина", author: 'Joanne Harris' },
 ];
 
 function BooksList2025() {

@@ -8,6 +8,42 @@ import './Posts.css';
 
 const posts = [
     {
+        id: 11,
+        slug: "what-i-learned-from-warren-buffett",
+        title: "What I learned from Warren Buffett and Charlie Munger",
+        author: "Dmytro Omelian",
+        date: "June 8, 2026",
+        preview: "Not investing advice - five ideas about how to think, how to work, and how to spend a life.",
+        externalUrl: "https://domelian.substack.com/p/what-i-learned-from-warren-buffett",
+        image: {
+            src: "https://substack-post-media.s3.amazonaws.com/public/images/d88d950e-9577-499e-ad9b-5fd60e88e0ed_2048x1638.jpeg",
+            alt: "Warren Buffett and Charlie Munger",
+        },
+        externalStats: {
+            likes: 25,
+            views: "3.69k",
+            comments: 0,
+        },
+    },
+    {
+        id: 10,
+        slug: "read-this-before-your-next-long-project",
+        title: "Read this before your next long project",
+        author: "Dmytro Omelian",
+        date: "May 18, 2026",
+        preview: "Notes from reading Jordan Mechner's Making of Prince of Persia.",
+        externalUrl: "https://domelian.substack.com/p/read-this-before-your-next-long-project",
+        image: {
+            src: "https://substack-post-media.s3.amazonaws.com/public/images/e9870752-c484-4aed-87b5-89eaf041f40d_686x386.jpeg",
+            alt: "Prince of Persia title screen",
+        },
+        externalStats: {
+            likes: 236,
+            views: "11k",
+            comments: 32,
+        },
+    },
+    {
         id: 9,
         slug: "dopamine",
         title: "dopamine",
@@ -393,6 +429,59 @@ function formatViewLabel(viewCount) {
     return `${viewCountFormatter.format(safeViewCount)} ${suffix}`;
 }
 
+function formatLikeLabel(likeCount) {
+    const safeLikeCount = Number.isFinite(likeCount) && likeCount >= 0 ? Math.floor(likeCount) : 0;
+    const suffix = safeLikeCount === 1 ? 'like' : 'likes';
+    return `${viewCountFormatter.format(safeLikeCount)} ${suffix}`;
+}
+
+function formatExternalViewLabel(viewCount) {
+    if (typeof viewCount === 'string' && viewCount.trim()) {
+        return `${viewCount.trim()} views`;
+    }
+
+    return formatViewLabel(viewCount);
+}
+
+function HeartIcon({ className = '' }) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M19.5 13.5 12 21l-7.5-7.5A5.1 5.1 0 0 1 12 6.6a5.1 5.1 0 0 1 7.5 6.9Z" />
+        </svg>
+    );
+}
+
+function EyeIcon({ className = '' }) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    );
+}
+
 function PostMeta({ date, viewCount, commentCount, discussionHref, selected = false }) {
     return (
         <div className={`post-meta${selected ? ' post-meta-selected' : ''}`}>
@@ -420,6 +509,94 @@ function PostMeta({ date, viewCount, commentCount, discussionHref, selected = fa
                 </>
             )}
         </div>
+    );
+}
+
+function ExternalPostStats({ stats }) {
+    if (!stats) {
+        return null;
+    }
+
+    return (
+        <div className="external-post-stats" aria-label="Substack stats">
+            {stats.views && (
+                <span className="external-post-stat">
+                    <EyeIcon className="post-stat-icon" />
+                    <span>{formatExternalViewLabel(stats.views)}</span>
+                </span>
+            )}
+            {typeof stats.likes === 'number' && (
+                <span className="external-post-stat">
+                    <HeartIcon className="post-stat-icon" />
+                    <span>{formatLikeLabel(stats.likes)}</span>
+                </span>
+            )}
+            {typeof stats.comments === 'number' && (
+                <span className="external-post-stat">
+                    <DiscussionIcon className="post-stat-icon" />
+                    <span>{formatDiscussionLabel(stats.comments)}</span>
+                </span>
+            )}
+        </div>
+    );
+}
+
+function PostListItem({ post, viewsBySlug, commentCountsBySlug }) {
+    const isExternalPost = Boolean(post.externalUrl);
+    const className = `post-item${post.image ? ' post-item-with-image' : ''}${isExternalPost ? ' post-item-external' : ''}`;
+    const content = (
+        <>
+            {post.image && (
+                <div className="post-preview-image-wrap">
+                    <img className="post-preview-image" src={post.image.src} alt={post.image.alt || ''} loading="lazy" />
+                </div>
+            )}
+            <div className="post-item-content">
+                <h3>{post.title}</h3>
+                {isExternalPost ? (
+                    <>
+                        <div className="post-meta">
+                            <span className="post-meta-date">{post.date}</span>
+                            <span className="post-meta-separator" aria-hidden="true">•</span>
+                            <span>Substack</span>
+                        </div>
+                        <div className="external-post-reveal">
+                            <ExternalPostStats stats={post.externalStats} />
+                            <p className="post-preview external-post-hover-preview">{post.preview}</p>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <PostMeta
+                            date={post.date}
+                            viewCount={viewsBySlug[post.slug]}
+                            commentCount={commentCountsBySlug[post.slug]}
+                        />
+                        <p className="post-preview">{post.preview}</p>
+                    </>
+                )}
+            </div>
+        </>
+    );
+
+    if (isExternalPost) {
+        return (
+            <a
+                key={post.id}
+                href={post.externalUrl}
+                className={className}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {content}
+            </a>
+        );
+    }
+
+    return (
+        <Link key={post.id} to={`/blog/${post.slug}`} className={className}>
+            {content}
+        </Link>
     );
 }
 
@@ -532,8 +709,11 @@ function Posts() {
 
     useEffect(() => {
         let isActive = true;
+        const localPostSlugs = posts
+            .filter((post) => !post.externalUrl)
+            .map((post) => post.slug);
 
-        getCommentCounts(posts.map(post => post.slug))
+        getCommentCounts(localPostSlugs)
             .then(nextCounts => {
                 if (isActive) {
                     setCommentCountsBySlug(nextCounts);
@@ -557,19 +737,12 @@ function Posts() {
                     .slice()
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .map(post => (
-                        <Link
+                        <PostListItem
                             key={post.id}
-                            to={`/blog/${post.slug}`}
-                            className="post-item"
-                        >
-                            <h3>{post.title}</h3>
-                            <PostMeta
-                                date={post.date}
-                                viewCount={viewsBySlug[post.slug]}
-                                commentCount={commentCountsBySlug[post.slug]}
-                            />
-                            <p className="post-preview">{post.preview}</p>
-                        </Link>
+                            post={post}
+                            viewsBySlug={viewsBySlug}
+                            commentCountsBySlug={commentCountsBySlug}
+                        />
                     ))}
             </div>
             <div className="newsletter-section">
@@ -589,7 +762,9 @@ export function PostDetail() {
     const [commentCount, setCommentCount] = useState();
     const [showEnglish, setShowEnglish] = useState(false);
     const hasEnglish = Boolean(item?.englishContent?.length);
-    const contentToRender = showEnglish && hasEnglish ? item.englishContent : item.content;
+    const contentToRender = item && !item.externalUrl
+        ? (showEnglish && hasEnglish ? item.englishContent : item.content)
+        : [];
     const backlinks = Array.isArray(item?.backlinks)
         ? item.backlinks.filter((link) => link?.href && link?.label)
         : [];
@@ -597,7 +772,7 @@ export function PostDetail() {
     useEffect(() => {
         let isActive = true;
 
-        if (!item) {
+        if (!item || item.externalUrl) {
             setViewCount(undefined);
             return () => {
                 isActive = false;
@@ -631,11 +806,34 @@ export function PostDetail() {
         setShowEnglish(false);
     }, [slug]);
 
+    useEffect(() => {
+        if (item?.externalUrl) {
+            window.location.replace(item.externalUrl);
+        }
+    }, [item]);
+
     if (!item) {
         return (
             <div className='posts-container'>
                 <Link to="/blog" className="go-back">Go back to blog</Link>
                 <p>Post not found.</p>
+            </div>
+        );
+    }
+
+    if (item.externalUrl) {
+        return (
+            <div className='posts-container'>
+                <Link to="/blog" className="go-back">Go back to blog</Link>
+                <p>Redirecting to Substack...</p>
+                <a
+                    className="post-external-cta"
+                    href={item.externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Open post
+                </a>
             </div>
         );
     }

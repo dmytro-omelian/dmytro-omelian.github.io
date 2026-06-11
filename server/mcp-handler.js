@@ -6,9 +6,6 @@ const {
   getAllPostViews,
   getBookshelfEntries,
   getBlogCommentCounts,
-  getQuestionBySlug,
-  getQuestionLogs,
-  getQuestions,
 } = require('./db');
 const {
   createExcerpt,
@@ -23,7 +20,7 @@ const {
 
 const SERVER_NAME = 'dmytro_website';
 const SERVER_TITLE = 'Dmytro Omelian Website MCP';
-const SERVER_DESCRIPTION = "Public, read-only MCP server for Dmytro Omelian\u2019s profile, projects, logs, timeline, blog, and bookshelf.";
+const SERVER_DESCRIPTION = "Public, read-only MCP server for Dmytro Omelian\u2019s profile, timeline, blog, and bookshelf.";
 const RESOURCE_SCHEME = 'portfolio';
 const DEFAULT_PROTOCOL_VERSION = '2025-03-26';
 const LATEST_PROTOCOL_VERSION = '2025-11-25';
@@ -62,7 +59,7 @@ const RESOURCE_DEFINITIONS = [
     uri: `${RESOURCE_SCHEME}://news`,
     name: 'news',
     title: 'Recent updates',
-    description: 'Chronological public updates about work, projects, and milestones.',
+    description: 'Chronological public updates about work, writing, and milestones.',
     mimeType: 'text/markdown',
   },
   {
@@ -77,20 +74,6 @@ const RESOURCE_DEFINITIONS = [
     name: 'activities',
     title: 'Activities',
     description: 'Community activities and side involvement.',
-    mimeType: 'text/markdown',
-  },
-  {
-    uri: `${RESOURCE_SCHEME}://projects/active`,
-    name: 'active_projects',
-    title: 'Active projects',
-    description: 'Publicly visible active projects with latest log dates.',
-    mimeType: 'text/markdown',
-  },
-  {
-    uri: `${RESOURCE_SCHEME}://projects/archive`,
-    name: 'archived_projects',
-    title: 'Archived projects',
-    description: 'Publicly visible archived projects with latest log dates.',
     mimeType: 'text/markdown',
   },
   {
@@ -111,13 +94,6 @@ const RESOURCE_DEFINITIONS = [
 
 const RESOURCE_TEMPLATE_DEFINITIONS = [
   {
-    name: 'project',
-    title: 'Project dossier',
-    uriTemplate: `${RESOURCE_SCHEME}://projects/{slug}`,
-    description: 'Read a specific public project and its logs by slug.',
-    mimeType: 'text/markdown',
-  },
-  {
     name: 'blog_post',
     title: 'Blog post',
     uriTemplate: `${RESOURCE_SCHEME}://blog/{slug}`,
@@ -136,7 +112,7 @@ const PROMPT_DEFINITIONS = [
   {
     name: 'introduce_dmytro',
     title: 'Introduce Dmytro',
-    description: 'Compose an introduction using the profile, experience, and active project context.',
+    description: 'Compose an introduction using the profile and experience context.',
     arguments: [
       {
         name: 'audience',
@@ -171,50 +147,6 @@ const TOOL_DEFINITIONS = [
           default: true,
         },
       },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'list_projects',
-    title: 'List projects',
-    description: 'List public projects from the logs system.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        archived: {
-          type: 'boolean',
-          description: 'Whether to return archived projects. Defaults to false.',
-          default: false,
-        },
-        limit: {
-          type: 'integer',
-          description: 'Maximum number of projects to return.',
-          minimum: 1,
-          maximum: 50,
-          default: 20,
-        },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'get_project',
-    title: 'Get project',
-    description: 'Return a specific public project with its logs.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        slug: {
-          type: 'string',
-          description: 'Project slug from the logs system.',
-        },
-        includeLogs: {
-          type: 'boolean',
-          description: 'Whether to include the full project logs.',
-          default: true,
-        },
-      },
-      required: ['slug'],
       additionalProperties: false,
     },
   },
@@ -282,7 +214,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'search_site_content',
     title: 'Search site content',
-    description: 'Search across about, experience, news, projects, and blog content.',
+    description: 'Search across about, experience, news, blog, and bookshelf content.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -524,7 +456,7 @@ function negotiateProtocolVersion(requestedVersion) {
 function getServerInstructions() {
   return [
     'Use this server as public, read-only context about Dmytro Omelian.',
-    'Prefer exact dates and distinguish between active projects, archived projects, blog posts, and career timeline items.',
+    'Prefer exact dates and distinguish between blog posts, reading notes, and career timeline items.',
     'If information is not present in the resources or tool results, say so instead of guessing.',
   ].join(' ');
 }
@@ -535,42 +467,9 @@ function buildRulesMarkdown() {
     '',
     '- This server is public and read-only.',
     '- Prefer exact dates when summarizing experience, updates, or blog posts.',
-    '- Treat active projects and archived projects as separate collections.',
     '- If information is missing from the provided resources or tool results, say so explicitly.',
     '- When possible, cite the resource URI or tool result you used.',
   ].join('\n');
-}
-
-function buildProjectMarkdown(project, logs) {
-  const header = [
-    `# ${project.title}`,
-    '',
-    `- Slug: ${project.slug}`,
-    `- Status: ${project.isArchived ? 'archived' : 'active'}`,
-    `- Log count: ${project.logCount}`,
-    `- Latest log date: ${project.latestLogDate || 'unknown'}`,
-  ];
-
-  if (logs.length === 0) {
-    header.push('', '## Logs', '', 'No public logs yet.');
-    return header.join('\n');
-  }
-
-  const renderedLogs = logs.flatMap((log) => [
-    '',
-    `## ${log.loggedAt}`,
-    '',
-    log.noteMarkdown,
-  ]);
-
-  return [...header, '', '## Logs', ...renderedLogs].join('\n');
-}
-
-function buildProjectListMarkdown(title, projects) {
-  return toMarkdownList(title, projects, (project) => {
-    const latestLog = project.latestLogDate ? `, latest log ${project.latestLogDate}` : '';
-    return `- [${project.title}](${RESOURCE_SCHEME}://projects/${project.slug})${latestLog}`;
-  });
 }
 
 const BOOKSHELF_STATUS_LABELS = {
@@ -642,48 +541,6 @@ async function getStaticContext() {
   };
 }
 
-async function getProjectCollections() {
-  const [activeProjects, archivedProjects] = await Promise.all([
-    getQuestions({ archived: false }),
-    getQuestions({ archived: true }),
-  ]);
-
-  return {
-    activeProjects,
-    archivedProjects,
-    allProjects: [...activeProjects, ...archivedProjects],
-  };
-}
-
-async function getProjectCollectionsSafe() {
-  try {
-    return await getProjectCollections();
-  } catch (error) {
-    return {
-      activeProjects: [],
-      archivedProjects: [],
-      allProjects: [],
-    };
-  }
-}
-
-async function getPublicProjectBySlug(slug) {
-  const project = await getQuestionBySlug(slug, {
-    includeHidden: false,
-    includeAdminFields: false,
-  });
-
-  if (!project) {
-    throw createHttpError(404, `Project "${slug}" was not found.`);
-  }
-
-  const logs = await getQuestionLogs(project.id);
-  return {
-    project,
-    logs,
-  };
-}
-
 async function readResource(uri) {
   const staticContext = await getStaticContext();
 
@@ -715,16 +572,6 @@ async function readResource(uri) {
       uri,
       renderSimpleTimelineMarkdown('Activities', staticContext.activities),
     );
-  }
-
-  if (uri === `${RESOURCE_SCHEME}://projects/active`) {
-    const { activeProjects } = await getProjectCollections();
-    return createTextResource(uri, buildProjectListMarkdown('Active projects', activeProjects));
-  }
-
-  if (uri === `${RESOURCE_SCHEME}://projects/archive`) {
-    const { archivedProjects } = await getProjectCollections();
-    return createTextResource(uri, buildProjectListMarkdown('Archived projects', archivedProjects));
   }
 
   if (uri === `${RESOURCE_SCHEME}://blog/index`) {
@@ -771,12 +618,6 @@ async function readResource(uri) {
     );
   }
 
-  if (parsedUri.hostname === 'projects') {
-    const slug = parsedUri.pathname.replace(/^\/+/, '').trim();
-    const { project, logs } = await getPublicProjectBySlug(slug);
-    return createTextResource(uri, buildProjectMarkdown(project, logs));
-  }
-
   throw createHttpError(404, `Resource "${uri}" was not found.`);
 }
 
@@ -803,8 +644,6 @@ async function getPrompt(name, args = {}) {
     const audience = String(args.audience || '').trim() || 'a collaborator';
     const aboutMarkdown = renderAboutMarkdown(staticContext.about);
     const experienceMarkdown = renderExperienceMarkdown(staticContext.experience);
-    const { activeProjects } = await getProjectCollectionsSafe();
-    const activeProjectsMarkdown = buildProjectListMarkdown('Active projects', activeProjects);
 
     return {
       description: 'A reusable prompt for creating a tailored introduction.',
@@ -822,10 +661,6 @@ async function getPrompt(name, args = {}) {
         {
           role: 'user',
           content: createEmbeddedResource(`${RESOURCE_SCHEME}://experience`, experienceMarkdown),
-        },
-        {
-          role: 'user',
-          content: createEmbeddedResource(`${RESOURCE_SCHEME}://projects/active`, activeProjectsMarkdown),
         },
       ],
     };
@@ -861,7 +696,6 @@ async function searchSiteContent({ query, limit }) {
 
   const tokens = [...new Set(normalizedQuery.split(/\s+/).filter(Boolean))];
   const staticContext = await getStaticContext();
-  const { allProjects } = await getProjectCollectionsSafe();
   const searchCandidates = [];
 
   searchCandidates.push({
@@ -907,28 +741,14 @@ async function searchSiteContent({ query, limit }) {
     searchCandidates.push({
       type: 'blog',
       title: post.title,
-      uri: `${RESOURCE_SCHEME}://blog/${post.slug}`,
-      body: [post.date, post.title, post.preview, ...post.content.map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))].join(' '),
-    });
-  });
-
-  const projectsWithLogs = await Promise.all(
-    allProjects.map(async (project) => ({
-      project,
-      logs: await getQuestionLogs(project.id).catch(() => []),
-    })),
-  );
-
-  projectsWithLogs.forEach(({ project, logs }) => {
-    searchCandidates.push({
-      type: 'project',
-      title: project.title,
-      uri: `${RESOURCE_SCHEME}://projects/${project.slug}`,
+      uri: post.externalUrl || `${RESOURCE_SCHEME}://blog/${post.slug}`,
       body: [
-        project.title,
-        project.slug,
-        project.latestLogDate,
-        ...logs.map((log) => `${log.loggedAt} ${log.noteMarkdown}`),
+        post.date,
+        post.title,
+        post.preview,
+        post.externalUrl,
+        post.externalStats ? JSON.stringify(post.externalStats) : '',
+        ...post.content.map((item) => (typeof item === 'string' ? item : JSON.stringify(item))),
       ].join(' '),
     });
   });
@@ -1005,58 +825,6 @@ async function callTool(name, args = {}) {
       },
       resourceLinks: [
         createResourceLink(`${RESOURCE_SCHEME}://experience`, 'experience', 'Experience timeline', 'Career timeline and education'),
-      ],
-    });
-  }
-
-  if (name === 'list_projects') {
-    const archived = normalizeBoolean(args.archived, false);
-    const limit = normalizeLimit(args.limit, 20, { min: 1, max: 50 });
-    const projects = await getQuestions({ archived });
-    const limitedProjects = projects.slice(0, limit);
-    const title = archived ? 'Archived projects' : 'Active projects';
-
-    return createToolResult({
-      text: buildProjectListMarkdown(title, limitedProjects),
-      structuredContent: {
-        archived,
-        projects: limitedProjects,
-      },
-      resourceLinks: [
-        createResourceLink(
-          archived ? `${RESOURCE_SCHEME}://projects/archive` : `${RESOURCE_SCHEME}://projects/active`,
-          archived ? 'archived_projects' : 'active_projects',
-          title,
-          `Public ${title.toLowerCase()} collection`,
-        ),
-      ],
-    });
-  }
-
-  if (name === 'get_project') {
-    const slug = String(args.slug || '').trim();
-
-    if (!slug) {
-      throw createHttpError(400, 'slug is required.');
-    }
-
-    const includeLogs = normalizeBoolean(args.includeLogs, true);
-    const { project, logs } = await getPublicProjectBySlug(slug);
-    const selectedLogs = includeLogs ? logs : [];
-
-    return createToolResult({
-      text: buildProjectMarkdown(project, selectedLogs),
-      structuredContent: {
-        project,
-        logs: selectedLogs,
-      },
-      resourceLinks: [
-        createResourceLink(
-          `${RESOURCE_SCHEME}://projects/${project.slug}`,
-          'project',
-          project.title,
-          'Project dossier with public logs',
-        ),
       ],
     });
   }
@@ -1247,14 +1015,14 @@ function buildDocsPayload(requestUrl) {
         id: 2,
         method: 'tools/list',
       },
-      getProject: {
+      getBlogPost: {
         jsonrpc: JSON_RPC_VERSION,
         id: 3,
         method: 'tools/call',
         params: {
-          name: 'get_project',
+          name: 'get_blog_post',
           arguments: {
-            slug: 'example-project-slug',
+            slug: 'read-this-before-your-next-long-project',
           },
         },
       },

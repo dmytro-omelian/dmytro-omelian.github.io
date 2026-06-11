@@ -3,7 +3,6 @@ import './About.css';
 import News from '../news/News';
 import Achievements from '../achievements/Achievements';
 import Others from '../others/Others';
-import OpenQuestionsSection from './OpenQuestionsSection';
 import NewsletterSignup from '../forms/NewsletterSignup';
 
 function About() {
@@ -47,10 +46,6 @@ function About() {
                                 </svg>
                             </a>
                         </div>
-                    </div>
-
-                    <div className="about-questions-block">
-                        <OpenQuestionsSection />
                     </div>
                 </div>
 

@@ -92,10 +92,14 @@ CREATE TABLE IF NOT EXISTS bookshelf_entries (
   status TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('active', 'want_to_read', 'backlog')),
   is_online BOOLEAN NOT NULL DEFAULT FALSE,
   url TEXT,
+  internal_notes TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE bookshelf_entries
+  ADD COLUMN IF NOT EXISTS internal_notes TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS bookshelf_entries_status_sort_idx
   ON bookshelf_entries (status, sort_order ASC, id ASC);

@@ -19,30 +19,81 @@ const STATUS_LABELS = {
   backlog: 'Backlog',
 };
 
-function getDefaultNewEntryDraft() {
+function getEmptyBookDraft() {
   return {
     title: '',
     author: '',
     status: 'backlog',
     isOnline: false,
     url: '',
+    sortOrder: 0,
     tags: '',
+    internalNotes: '',
+  };
+}
+
+function getDraftFromEntry(entry) {
+  if (!entry) return getEmptyBookDraft();
+
+  return {
+    title: entry.title || '',
+    author: entry.author || '',
+    status: entry.status || 'backlog',
+    isOnline: Boolean(entry.isOnline),
+    url: entry.url || '',
+    sortOrder: entry.sortOrder ?? 0,
+    tags: Array.isArray(entry.tags) ? entry.tags.join(', ') : String(entry.tags || ''),
+    internalNotes: entry.internalNotes || '',
+  };
+}
+
+function parseTags(value) {
+  if (Array.isArray(value)) {
+    return value.map((tag) => String(tag).trim()).filter(Boolean);
+  }
+
+  return String(value || '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function getPayloadFromDraft(draft) {
+  return {
+    title: draft.title.trim(),
+    author: draft.author.trim(),
+    status: draft.status,
+    isOnline: Boolean(draft.isOnline),
+    url: draft.url.trim() || null,
+    sortOrder: draft.sortOrder,
+    tags: parseTags(draft.tags),
+    internalNotes: draft.internalNotes.trim(),
   };
 }
 
 function formatEntryMeta(entry) {
-  const parts = [entry.author, STATUS_LABELS[entry.status] || entry.status];
+  const parts = [STATUS_LABELS[entry.status] || entry.status];
 
   if (entry.isOnline) {
-    parts.push('Online');
+    parts.push('online');
   }
 
   if (entry.tags && entry.tags.length > 0) {
-    parts.push(entry.tags.join(', '));
+    parts.push(entry.tags.map((tag) => `#${tag}`).join(' '));
   }
 
-  parts.push(`Order ${entry.sortOrder}`);
-  return parts.join(' · ');
+  parts.push(`order:${entry.sortOrder}`);
+  return parts.join(' | ');
+}
+
+function truncateText(value, maxLength = 160) {
+  const normalizedValue = String(value || '').replace(/\s+/g, ' ').trim();
+
+  if (normalizedValue.length <= maxLength) {
+    return normalizedValue;
+  }
+
+  return `${normalizedValue.slice(0, maxLength - 3)}...`;
 }
 
 function groupByStatus(entries) {
@@ -98,27 +149,32 @@ function BookshelfWorkspace({
 }) {
   const [entries, setEntries] = useState([]);
   const [selectedEntryId, setSelectedEntryId] = useState(null);
-  const [newEntryDraft, setNewEntryDraft] = useState(getDefaultNewEntryDraft);
+  const [drawerMode, setDrawerMode] = useState(null);
+  const [draft, setDraft] = useState(getEmptyBookDraft);
   const [isLoading, setIsLoading] = useState(false);
   const [workspaceError, setWorkspaceError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
-
   const [sidebarSearch, setSidebarSearch] = useState('');
 
   const selectedEntry = useMemo(
-    () => entries.find((e) => e.id === selectedEntryId) || null,
+    () => entries.find((entry) => entry.id === selectedEntryId) || null,
     [entries, selectedEntryId],
   );
+
   const filteredEntries = useMemo(() => {
     const query = sidebarSearch.trim().toLowerCase();
     if (!query) return entries;
+
     return entries.filter((entry) =>
       entry.title.toLowerCase().includes(query)
       || entry.author.toLowerCase().includes(query)
+      || String(entry.internalNotes || '').toLowerCase().includes(query)
       || (entry.tags || []).some((tag) => tag.toLowerCase().includes(query))
     );
   }, [entries, sidebarSearch]);
+
   const entriesByStatus = useMemo(() => groupByStatus(filteredEntries), [filteredEntries]);
+  const isDrawerOpen = drawerMode === 'create' || drawerMode === 'edit';
 
   async function loadEntries(keyword = adminKeyword, preferredId = selectedEntryId) {
     if (!keyword) {
@@ -134,11 +190,11 @@ function BookshelfWorkspace({
       setSelectedEntryId((currentId) => {
         const candidateId = preferredId || currentId;
 
-        if (candidateId && nextEntries.some((e) => e.id === candidateId)) {
+        if (candidateId && nextEntries.some((entry) => entry.id === candidateId)) {
           return candidateId;
         }
 
-        return nextEntries[0]?.id || null;
+        return null;
       });
       return true;
     } catch (error) {
@@ -150,23 +206,38 @@ function BookshelfWorkspace({
   }
 
   useEffect(() => {
-    loadEntries(adminKeyword);
+    loadEntries(adminKeyword, selectedEntryId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminKeyword]);
 
-  function handleEntryFieldChange(fieldName, value) {
-    setEntries((current) => current.map((entry) => (
-      entry.id === selectedEntryId
-        ? { ...entry, [fieldName]: value }
-        : entry
-    )));
+  function openCreateDrawer() {
+    setWorkspaceError('');
+    setStatusMessage('');
+    setSelectedEntryId(null);
+    setDraft(getEmptyBookDraft());
+    setDrawerMode('create');
   }
 
-  async function handleCreateEntry(options = {}) {
-    const trimmedTitle = newEntryDraft.title.trim();
-    const trimmedAuthor = newEntryDraft.author.trim();
+  function openEditDrawer(entry) {
+    setWorkspaceError('');
+    setStatusMessage('');
+    setSelectedEntryId(entry.id);
+    setDraft(getDraftFromEntry(entry));
+    setDrawerMode('edit');
+  }
 
-    if (!trimmedTitle || !trimmedAuthor) {
+  function closeDrawer() {
+    setDrawerMode(null);
+  }
+
+  function updateDraft(fieldName, value) {
+    setDraft((currentDraft) => ({ ...currentDraft, [fieldName]: value }));
+  }
+
+  async function handleSaveDraft(options = {}) {
+    const payload = getPayloadFromDraft(draft);
+
+    if (!payload.title || !payload.author) {
       setWorkspaceError('Title and author are required.');
       return;
     }
@@ -175,29 +246,33 @@ function BookshelfWorkspace({
     setStatusMessage('');
 
     try {
-      const tags = newEntryDraft.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
+      if (drawerMode === 'create') {
+        const result = await createAdminBookshelfEntry(adminKeyword, {
+          ...payload,
+          autoTag: options.autoTag || false,
+        });
 
-      const payload = await createAdminBookshelfEntry(adminKeyword, {
-        title: trimmedTitle,
-        author: trimmedAuthor,
-        status: newEntryDraft.status,
-        isOnline: newEntryDraft.isOnline,
-        url: newEntryDraft.url.trim() || null,
-        tags,
-        autoTag: options.autoTag || false,
-      });
+        setSelectedEntryId(result.entry.id);
+        setDraft(getDraftFromEntry(result.entry));
+        setDrawerMode('edit');
+        await loadEntries(adminKeyword, result.entry.id);
 
-      await loadEntries(adminKeyword, payload.entry.id);
-      setNewEntryDraft(getDefaultNewEntryDraft());
-
-      if (payload.autoTagged && payload.suggestedTags) {
-        setStatusMessage(`Book added with auto-tags: ${payload.suggestedTags.join(', ')}`);
-      } else {
-        setStatusMessage('Book added.');
+        if (result.autoTagged && result.suggestedTags) {
+          setStatusMessage(`Book added with auto-tags: ${result.suggestedTags.join(', ')}`);
+        } else {
+          setStatusMessage('Book added.');
+        }
+        return;
       }
+
+      if (!selectedEntry) {
+        return;
+      }
+
+      const result = await updateAdminBookshelfEntry(adminKeyword, selectedEntry.id, payload);
+      setDraft(getDraftFromEntry(result.entry));
+      await loadEntries(adminKeyword, result.entry.id);
+      setStatusMessage('Book saved.');
     } catch (error) {
       setWorkspaceError(error.message);
     }
@@ -211,93 +286,11 @@ function BookshelfWorkspace({
 
     try {
       const result = await autoTagBookshelfEntry(adminKeyword, selectedEntry.id, true);
+      if (result.entry) {
+        setDraft(getDraftFromEntry(result.entry));
+      }
       await loadEntries(adminKeyword, selectedEntry.id);
       setStatusMessage(`Auto-tagged: ${result.suggestedTags.join(', ')}`);
-    } catch (error) {
-      setWorkspaceError(error.message);
-    }
-  }
-
-  async function handleSaveEntry() {
-    if (!selectedEntry) {
-      return;
-    }
-
-    const trimmedTitle = String(selectedEntry.title || '').trim();
-    const trimmedAuthor = String(selectedEntry.author || '').trim();
-
-    if (!trimmedTitle || !trimmedAuthor) {
-      setWorkspaceError('Title and author are required.');
-      return;
-    }
-
-    setWorkspaceError('');
-    setStatusMessage('');
-
-    try {
-      const tagsValue = typeof selectedEntry.tags === 'string'
-        ? selectedEntry.tags
-        : (selectedEntry.tags || []).join(', ');
-      const tags = tagsValue
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
-
-      const payload = await updateAdminBookshelfEntry(adminKeyword, selectedEntry.id, {
-        title: trimmedTitle,
-        author: trimmedAuthor,
-        status: selectedEntry.status,
-        isOnline: selectedEntry.isOnline,
-        url: String(selectedEntry.url || '').trim() || null,
-        sortOrder: selectedEntry.sortOrder,
-        tags,
-      });
-
-      await loadEntries(adminKeyword, payload.entry.id);
-      setStatusMessage('Book saved.');
-    } catch (error) {
-      setWorkspaceError(error.message);
-    }
-  }
-
-  async function handleInlineStatusChange(entryId, newStatus) {
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry || entry.status === newStatus) return;
-
-    setEntries((current) => current.map((e) =>
-      e.id === entryId ? { ...e, status: newStatus } : e
-    ));
-
-    try {
-      const tagsValue = Array.isArray(entry.tags) ? entry.tags : [];
-      await updateAdminBookshelfEntry(adminKeyword, entryId, {
-        title: entry.title,
-        author: entry.author,
-        status: newStatus,
-        isOnline: entry.isOnline,
-        url: entry.url || null,
-        sortOrder: entry.sortOrder,
-        tags: tagsValue,
-      });
-      await loadEntries(adminKeyword, selectedEntryId);
-    } catch (error) {
-      setWorkspaceError(error.message);
-      await loadEntries(adminKeyword, selectedEntryId);
-    }
-  }
-
-  async function handleInlineDelete(entry) {
-    if (typeof window !== 'undefined' && !window.confirm(`Delete "${entry.title}"?`)) {
-      return;
-    }
-
-    try {
-      await deleteAdminBookshelfEntry(adminKeyword, entry.id);
-      const nextPreferred = entry.id === selectedEntryId
-        ? entries.filter((e) => e.id !== entry.id)[0]?.id || null
-        : selectedEntryId;
-      await loadEntries(adminKeyword, nextPreferred);
-      setStatusMessage('Book deleted.');
     } catch (error) {
       setWorkspaceError(error.message);
     }
@@ -317,8 +310,10 @@ function BookshelfWorkspace({
 
     try {
       await deleteAdminBookshelfEntry(adminKeyword, selectedEntry.id);
-      const remainingIds = entries.filter((e) => e.id !== selectedEntry.id).map((e) => e.id);
-      await loadEntries(adminKeyword, remainingIds[0] || null);
+      setSelectedEntryId(null);
+      setDraft(getEmptyBookDraft());
+      setDrawerMode(null);
+      await loadEntries(adminKeyword, null);
       setStatusMessage('Book deleted.');
     } catch (error) {
       setWorkspaceError(error.message);
@@ -326,7 +321,7 @@ function BookshelfWorkspace({
   }
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell admin-bookshelf-shell${isDrawerOpen ? ' has-sidepanel' : ''}`}>
       <aside className="admin-sidebar">
         <div className="admin-sidebar-header">
           <div>
@@ -347,103 +342,54 @@ function BookshelfWorkspace({
           onWorkspaceChange={onWorkspaceChange}
         />
 
-        <section className="admin-sidebar-panel">
+        <section className="admin-sidebar-panel admin-bookshelf-sidebar-panel">
           <div>
-            <p className="admin-sidebar-label">Add book</p>
-            <p className="admin-side-note">Add a book to your shelf, then edit details on the right.</p>
+            <p className="admin-sidebar-label">bookshelf.md</p>
+            <div className="admin-bookshelf-counts" aria-label="Bookshelf counts">
+              <span>{entries.length} books</span>
+              <span>{entries.filter((entry) => entry.internalNotes).length} notes</span>
+            </div>
           </div>
 
-          <div className="admin-field-grid">
-            <label className="admin-field">
-              <span>Title</span>
-              <input
-                type="text"
-                value={newEntryDraft.title}
-                onChange={(e) => setNewEntryDraft((d) => ({ ...d, title: e.target.value }))}
-                placeholder="Book title"
-              />
-            </label>
-
-            <label className="admin-field">
-              <span>Author</span>
-              <input
-                type="text"
-                value={newEntryDraft.author}
-                onChange={(e) => setNewEntryDraft((d) => ({ ...d, author: e.target.value }))}
-                placeholder="Author name"
-              />
-            </label>
-
-            <label className="admin-field admin-field-compact">
-              <span>Status</span>
-              <select
-                value={newEntryDraft.status}
-                onChange={(e) => setNewEntryDraft((d) => ({ ...d, status: e.target.value }))}
-              >
-                {STATUS_OPTIONS.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="admin-field admin-field-compact">
-              <span>Online</span>
-              <input
-                type="checkbox"
-                checked={newEntryDraft.isOnline}
-                onChange={(e) => setNewEntryDraft((d) => ({ ...d, isOnline: e.target.checked }))}
-              />
-            </label>
-
-            <label className="admin-field">
-              <span>URL</span>
-              <input
-                type="text"
-                value={newEntryDraft.url}
-                onChange={(e) => setNewEntryDraft((d) => ({ ...d, url: e.target.value }))}
-                placeholder="https://..."
-              />
-            </label>
-
-            <label className="admin-field">
-              <span>Tags (comma-separated)</span>
-              <input
-                type="text"
-                value={newEntryDraft.tags}
-                onChange={(e) => setNewEntryDraft((d) => ({ ...d, tags: e.target.value }))}
-                placeholder="fiction, philosophy"
-              />
-            </label>
+          <div className="admin-sidebar-search">
+            <input
+              type="text"
+              value={sidebarSearch}
+              onChange={(event) => setSidebarSearch(event.target.value)}
+              placeholder="Search books..."
+            />
+            {sidebarSearch && (
+              <span className="admin-sidebar-search-count">
+                {filteredEntries.length} result{filteredEntries.length !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
 
-          <div className="admin-top-actions">
+          <div className="admin-top-actions admin-bookshelf-sidebar-actions">
             <button
               className="admin-solid-button"
               type="button"
-              onClick={() => handleCreateEntry()}
+              onClick={openCreateDrawer}
             >
-              Add
+              Add book
             </button>
             <button
               className="admin-ghost-button"
               type="button"
-              onClick={() => handleCreateEntry({ autoTag: true })}
+              onClick={() => loadEntries(adminKeyword, selectedEntryId)}
             >
-              Add + Auto Tag
+              Refresh
             </button>
           </div>
         </section>
-
       </aside>
 
-      <main className="admin-workspace">
-        <div className="admin-workspace-header">
+      <main className="admin-workspace admin-bookshelf-workspace">
+        <div className="admin-workspace-header admin-bookshelf-workspace-header">
           <div>
-            <p className="admin-sidebar-label">Selected book</p>
-            <h2>{selectedEntry ? selectedEntry.title : 'Select a book'}</h2>
-            {selectedEntry && (
-              <p className="admin-side-note">{formatEntryMeta(selectedEntry)}</p>
-            )}
+            <p className="admin-sidebar-label">Books</p>
+            <h2>bookshelf.md</h2>
+            <p className="admin-side-note">{filteredEntries.length} of {entries.length} visible</p>
           </div>
           <div className="admin-top-actions">
             <button
@@ -453,31 +399,13 @@ function BookshelfWorkspace({
             >
               Refresh
             </button>
-            {selectedEntry && (
-              <>
-                <button
-                  className="admin-ghost-button"
-                  type="button"
-                  onClick={handleDeleteEntry}
-                >
-                  Delete
-                </button>
-                <button
-                  className="admin-ghost-button"
-                  type="button"
-                  onClick={handleAutoTagEntry}
-                >
-                  Auto Tag
-                </button>
-                <button
-                  className="admin-solid-button"
-                  type="button"
-                  onClick={handleSaveEntry}
-                >
-                  Save
-                </button>
-              </>
-            )}
+            <button
+              className="admin-solid-button"
+              type="button"
+              onClick={openCreateDrawer}
+            >
+              Add book
+            </button>
           </div>
         </div>
 
@@ -488,177 +416,204 @@ function BookshelfWorkspace({
           </div>
         )}
 
-        {!selectedEntry && (
-          <section className="admin-empty-state">
-            <p>Select a book on the left or add a new one.</p>
-          </section>
-        )}
+        <section className="admin-bookshelf-md" aria-label="Bookshelf markdown list">
+          {isLoading && <p className="admin-side-note">Loading books...</p>}
+          {!isLoading && entriesByStatus.length === 0 && (
+            <p className="admin-side-note">No books found.</p>
+          )}
 
-        {selectedEntry && (
-          <section className="admin-panel admin-panel-wide">
-            <div className="admin-panel-header">
-              <div>
-                <h3>Book details</h3>
-                <p className="admin-side-note">Edit book properties below. Tags are comma-separated.</p>
-              </div>
-            </div>
-
-            <div className="admin-note-grid">
-              <div className="admin-note-editor-pane">
-                <label className="admin-field">
-                  <span>Title</span>
-                  <input
-                    type="text"
-                    value={selectedEntry.title || ''}
-                    onChange={(e) => handleEntryFieldChange('title', e.target.value)}
-                  />
-                </label>
-
-                <label className="admin-field">
-                  <span>Author</span>
-                  <input
-                    type="text"
-                    value={selectedEntry.author || ''}
-                    onChange={(e) => handleEntryFieldChange('author', e.target.value)}
-                  />
-                </label>
-
-                <div className="admin-inline-fields">
-                  <label className="admin-field admin-field-compact">
-                    <span>Status</span>
-                    <select
-                      value={selectedEntry.status}
-                      onChange={(e) => handleEntryFieldChange('status', e.target.value)}
-                    >
-                      {STATUS_OPTIONS.map(({ value, label }) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="admin-field admin-field-compact">
-                    <span>Sort order</span>
-                    <input
-                      type="number"
-                      value={selectedEntry.sortOrder}
-                      onChange={(e) => handleEntryFieldChange('sortOrder', e.target.value)}
-                    />
-                  </label>
-
-                  <label className="admin-field admin-field-compact">
-                    <span>Online</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedEntry.isOnline}
-                      onChange={(e) => handleEntryFieldChange('isOnline', e.target.checked)}
-                    />
-                  </label>
-                </div>
-
-                <label className="admin-field">
-                  <span>URL</span>
-                  <input
-                    type="text"
-                    value={selectedEntry.url || ''}
-                    onChange={(e) => handleEntryFieldChange('url', e.target.value)}
-                    placeholder="https://..."
-                  />
-                </label>
-
-                <label className="admin-field">
-                  <span>Tags (comma-separated)</span>
-                  <input
-                    type="text"
-                    value={
-                      typeof selectedEntry.tags === 'string'
-                        ? selectedEntry.tags
-                        : (selectedEntry.tags || []).join(', ')
-                    }
-                    onChange={(e) => handleEntryFieldChange('tags', e.target.value)}
-                    placeholder="fiction, philosophy"
-                  />
-                </label>
-              </div>
-            </div>
-          </section>
-        )}
-      </main>
-
-      <section className="admin-bottom-panel">
-        <div className="admin-bottom-panel-header">
-          <p className="admin-sidebar-label">Books</p>
-          <div className="admin-sidebar-search">
-            <input
-              type="text"
-              value={sidebarSearch}
-              onChange={(e) => setSidebarSearch(e.target.value)}
-              placeholder="Search books..."
-            />
-            {sidebarSearch && (
-              <span className="admin-sidebar-search-count">
-                {filteredEntries.length} result{filteredEntries.length !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="admin-bottom-panel-grid">
           {entriesByStatus.map(({ status, label, entries: statusEntries }) => (
-            <section className="admin-reading-year-group" key={status}>
-              <p className="admin-reading-year-heading">{label}</p>
-              <div className="admin-question-list admin-question-list-compact">
+            <section className="admin-bookshelf-md-section" key={status}>
+              <h3>## {label}</h3>
+              <div className="admin-bookshelf-md-list">
                 {statusEntries.map((entry) => (
-                  <div
+                  <button
+                    className={`admin-bookshelf-md-row${entry.id === selectedEntryId ? ' is-active' : ''}`}
                     key={entry.id}
-                    className={`admin-question-item admin-bookshelf-row${entry.id === selectedEntryId ? ' is-active' : ''}`}
-                    onClick={() => setSelectedEntryId(entry.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter') setSelectedEntryId(entry.id); }}
+                    type="button"
+                    onClick={() => openEditDrawer(entry)}
                   >
-                    <span className="admin-question-row">
-                      <span className="admin-question-title">{entry.title}</span>
-                      <span className="admin-bookshelf-row-actions">
-                        <select
-                          className="admin-inline-status-select"
-                          value={entry.status}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleInlineStatusChange(entry.id, e.target.value);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {STATUS_OPTIONS.map(({ value, label }) => (
-                            <option key={value} value={value}>{label}</option>
-                          ))}
-                        </select>
-                        <button
-                          className="admin-inline-delete-button"
-                          type="button"
-                          title={`Delete "${entry.title}"`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInlineDelete(entry);
-                          }}
-                        >
-                          ✕
-                        </button>
-                        {entry.id === selectedEntryId && (
-                          <span className="admin-question-badge">Selected</span>
+                    <span className="admin-bookshelf-md-line">
+                      <span className="admin-bookshelf-md-book">
+                        <span className="admin-bookshelf-md-prefix">-</span>
+                        <span className="admin-bookshelf-md-title">{entry.title}</span>
+                        <span className="admin-bookshelf-md-author">by {entry.author}</span>
+                      </span>
+                      <span className="admin-bookshelf-md-tags" aria-label="Book tags">
+                        {entry.isOnline && <code className="admin-bookshelf-md-tag">online</code>}
+                        {(entry.tags || []).map((tag) => (
+                          <code className="admin-bookshelf-md-tag" key={tag}>{tag}</code>
+                        ))}
+                        {entry.internalNotes && (
+                          <code
+                            className="admin-bookshelf-md-tag admin-bookshelf-md-note-tag"
+                            title={truncateText(entry.internalNotes, 240)}
+                          >
+                            note
+                          </code>
                         )}
                       </span>
                     </span>
-                    <span className="admin-question-meta">{formatEntryMeta(entry)}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </section>
           ))}
+        </section>
+      </main>
 
-          {isLoading && <p className="admin-side-note">Loading books...</p>}
-          {!isLoading && entries.length === 0 && <p className="admin-side-note">No books yet.</p>}
-        </div>
-      </section>
+      {isDrawerOpen && (
+        <>
+          <button
+            className="admin-sidepanel-backdrop"
+            type="button"
+            aria-label="Close bookshelf editor"
+            onClick={closeDrawer}
+          />
+          <aside className="admin-sidepanel" aria-label="Bookshelf editor">
+            <div className="admin-sidepanel-header">
+              <div>
+                <p className="admin-sidebar-label">{drawerMode === 'create' ? 'New book' : 'Edit book'}</p>
+                <h2>{drawerMode === 'create' ? 'Add book' : (selectedEntry?.title || 'Book')}</h2>
+                {drawerMode === 'edit' && selectedEntry && (
+                  <p className="admin-side-note">{formatEntryMeta(selectedEntry)}</p>
+                )}
+              </div>
+              <button
+                className="admin-ghost-button"
+                type="button"
+                onClick={closeDrawer}
+              >
+                Close
+              </button>
+            </div>
+
+            <form
+              className="admin-sidepanel-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleSaveDraft();
+              }}
+            >
+              <label className="admin-field">
+                <span>Title</span>
+                <input
+                  type="text"
+                  value={draft.title}
+                  onChange={(event) => updateDraft('title', event.target.value)}
+                  placeholder="Book title"
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Author</span>
+                <input
+                  type="text"
+                  value={draft.author}
+                  onChange={(event) => updateDraft('author', event.target.value)}
+                  placeholder="Author name"
+                />
+              </label>
+
+              <div className="admin-inline-fields">
+                <label className="admin-field admin-field-compact">
+                  <span>Status</span>
+                  <select
+                    value={draft.status}
+                    onChange={(event) => updateDraft('status', event.target.value)}
+                  >
+                    {STATUS_OPTIONS.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="admin-field admin-field-compact">
+                  <span>Sort</span>
+                  <input
+                    type="number"
+                    value={draft.sortOrder}
+                    onChange={(event) => updateDraft('sortOrder', event.target.value)}
+                  />
+                </label>
+
+                <label className="admin-field admin-field-compact admin-checkbox-field">
+                  <span>Online</span>
+                  <input
+                    type="checkbox"
+                    checked={draft.isOnline}
+                    onChange={(event) => updateDraft('isOnline', event.target.checked)}
+                  />
+                </label>
+              </div>
+
+              <label className="admin-field">
+                <span>URL</span>
+                <input
+                  type="text"
+                  value={draft.url}
+                  onChange={(event) => updateDraft('url', event.target.value)}
+                  placeholder="https://..."
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Tags</span>
+                <input
+                  type="text"
+                  value={draft.tags}
+                  onChange={(event) => updateDraft('tags', event.target.value)}
+                  placeholder="fiction, philosophy"
+                />
+              </label>
+
+              <label className="admin-field">
+                <span>Internal notes</span>
+                <textarea
+                  className="admin-code-output admin-bookshelf-notes-input"
+                  value={draft.internalNotes}
+                  onChange={(event) => updateDraft('internalNotes', event.target.value)}
+                  placeholder="Private admin notes"
+                  rows={8}
+                />
+              </label>
+
+              <div className="admin-sidepanel-actions">
+                {drawerMode === 'edit' && (
+                  <>
+                    <button
+                      className="admin-ghost-button"
+                      type="button"
+                      onClick={handleDeleteEntry}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      className="admin-ghost-button"
+                      type="button"
+                      onClick={handleAutoTagEntry}
+                    >
+                      Auto Tag
+                    </button>
+                  </>
+                )}
+                {drawerMode === 'create' && (
+                  <button
+                    className="admin-ghost-button"
+                    type="button"
+                    onClick={() => handleSaveDraft({ autoTag: true })}
+                  >
+                    Add + Auto Tag
+                  </button>
+                )}
+                <button className="admin-solid-button" type="submit">
+                  {drawerMode === 'create' ? 'Add' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </aside>
+        </>
+      )}
     </div>
   );
 }

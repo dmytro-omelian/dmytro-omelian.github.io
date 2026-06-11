@@ -126,6 +126,18 @@ function normalizePostContentItem(item) {
   return String(item || '');
 }
 
+function normalizeExternalStats(stats) {
+  if (!stats || typeof stats !== 'object') {
+    return null;
+  }
+
+  return {
+    views: typeof stats.views === 'string' ? stats.views.trim() : Number(stats.views),
+    likes: Number(stats.likes),
+    comments: Number(stats.comments),
+  };
+}
+
 function normalizePost(post) {
   return {
     id: Number(post.id),
@@ -134,6 +146,14 @@ function normalizePost(post) {
     author: String(post.author || DEFAULT_AUTHOR).trim() || DEFAULT_AUTHOR,
     date: String(post.date || '').trim(),
     preview: String(post.preview || '').trim(),
+    externalUrl: String(post.externalUrl || '').trim(),
+    image: post.image && typeof post.image === 'object'
+      ? {
+        src: String(post.image.src || '').trim(),
+        alt: String(post.image.alt || '').trim(),
+      }
+      : null,
+    externalStats: normalizeExternalStats(post.externalStats),
     content: Array.isArray(post.content)
       ? post.content.map(normalizePostContentItem)
       : [],
@@ -417,11 +437,36 @@ function renderPostContentItem(item) {
   return normalizeWhitespace(JSON.stringify(item));
 }
 
+function addExternalStats(metadata, externalStats) {
+  if (!externalStats) {
+    return;
+  }
+
+  if (typeof externalStats.views === 'string' && externalStats.views.trim()) {
+    metadata.push(`- Substack views: ${externalStats.views.trim()}`);
+  } else if (Number.isFinite(externalStats.views)) {
+    metadata.push(`- Substack views: ${externalStats.views}`);
+  }
+
+  if (Number.isFinite(externalStats.likes)) {
+    metadata.push(`- Substack likes: ${externalStats.likes}`);
+  }
+
+  if (Number.isFinite(externalStats.comments)) {
+    metadata.push(`- Substack comments: ${externalStats.comments}`);
+  }
+}
+
 function renderBlogPostMarkdown(post, { viewCount, commentCount } = {}) {
   const metadata = [
     `- Author: ${post.author}`,
     `- Published: ${post.date}`,
   ];
+
+  if (post.externalUrl) {
+    metadata.push(`- External URL: ${post.externalUrl}`);
+    addExternalStats(metadata, post.externalStats);
+  }
 
   if (typeof viewCount === 'number') {
     metadata.push(`- Views: ${viewCount}`);
@@ -431,12 +476,16 @@ function renderBlogPostMarkdown(post, { viewCount, commentCount } = {}) {
     metadata.push(`- Comments: ${commentCount}`);
   }
 
+  const body = post.content.length > 0
+    ? post.content.map(renderPostContentItem)
+    : [post.preview].filter(Boolean);
+
   return [
     `# ${post.title}`,
     '',
     ...metadata,
     '',
-    ...post.content.map(renderPostContentItem),
+    ...body,
   ].join('\n');
 }
 
@@ -447,16 +496,33 @@ function renderBlogIndexMarkdown(posts, { viewCounts = {}, commentCounts = {} } 
     ...posts.map((post) => {
       const stats = [];
 
-      if (typeof viewCounts[post.slug] === 'number') {
-        stats.push(`${viewCounts[post.slug]} views`);
+      if (post.externalStats) {
+        if (typeof post.externalStats.views === 'string' && post.externalStats.views.trim()) {
+          stats.push(`${post.externalStats.views.trim()} views`);
+        } else if (Number.isFinite(post.externalStats.views)) {
+          stats.push(`${post.externalStats.views} views`);
+        }
+
+        if (Number.isFinite(post.externalStats.likes)) {
+          stats.push(`${post.externalStats.likes} likes`);
+        }
+
+        if (Number.isFinite(post.externalStats.comments)) {
+          stats.push(`${post.externalStats.comments} comments`);
+        }
+      } else {
+        if (typeof viewCounts[post.slug] === 'number') {
+          stats.push(`${viewCounts[post.slug]} views`);
+        }
+
+        if (typeof commentCounts[post.slug] === 'number') {
+          stats.push(`${commentCounts[post.slug]} comments`);
+        }
       }
 
-      if (typeof commentCounts[post.slug] === 'number') {
-        stats.push(`${commentCounts[post.slug]} comments`);
-      }
-
+      const href = post.externalUrl || `portfolio://blog/${post.slug}`;
       const statsText = stats.length > 0 ? ` (${stats.join(', ')})` : '';
-      return `- ${post.date}: [${post.title}](portfolio://blog/${post.slug})${statsText}\n  ${post.preview}`;
+      return `- ${post.date}: [${post.title}](${href})${statsText}\n  ${post.preview}`;
     }),
   ].join('\n');
 }

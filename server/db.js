@@ -1551,8 +1551,8 @@ function normalizeBookshelfStatus(value, fallback = 'backlog') {
   return normalizedValue;
 }
 
-function mapBookshelfRow(row) {
-  return {
+function mapBookshelfRow(row, options = {}) {
+  const entry = {
     id: Number(row.id),
     title: row.title,
     author: row.author,
@@ -1562,9 +1562,15 @@ function mapBookshelfRow(row) {
     sortOrder: Number(row.sort_order),
     tags: row.tags ? row.tags.filter(Boolean) : [],
   };
+
+  if (options.includeInternalNotes) {
+    entry.internalNotes = normalizeOptionalStoredText(row.internal_notes) || '';
+  }
+
+  return entry;
 }
 
-async function getBookshelfEntries() {
+async function getBookshelfEntries(options = {}) {
   await ensureDatabase();
 
   const result = await query(`
@@ -1575,6 +1581,7 @@ async function getBookshelfEntries() {
       e.status,
       e.is_online,
       e.url,
+      e.internal_notes,
       e.sort_order,
       ARRAY_AGG(t.name ORDER BY t.name) FILTER (WHERE t.name IS NOT NULL) AS tags
     FROM bookshelf_entries e
@@ -1584,10 +1591,10 @@ async function getBookshelfEntries() {
     ORDER BY e.sort_order ASC, e.id ASC
   `);
 
-  return result.rows.map(mapBookshelfRow);
+  return result.rows.map((row) => mapBookshelfRow(row, options));
 }
 
-async function getBookshelfEntryById(entryId) {
+async function getBookshelfEntryById(entryId, options = {}) {
   await ensureDatabase();
 
   const result = await query(`
@@ -1598,6 +1605,7 @@ async function getBookshelfEntryById(entryId) {
       e.status,
       e.is_online,
       e.url,
+      e.internal_notes,
       e.sort_order,
       ARRAY_AGG(t.name ORDER BY t.name) FILTER (WHERE t.name IS NOT NULL) AS tags
     FROM bookshelf_entries e
@@ -1611,7 +1619,7 @@ async function getBookshelfEntryById(entryId) {
     return null;
   }
 
-  return mapBookshelfRow(result.rows[0]);
+  return mapBookshelfRow(result.rows[0], options);
 }
 
 async function syncBookshelfTags(entryId, tagNames, db) {
@@ -1651,22 +1659,23 @@ async function createBookshelfEntry(payload) {
   const status = normalizeBookshelfStatus(payload.status);
   const isOnline = normalizeOptionalBoolean(payload.isOnline, false);
   const url = sanitizeOptionalText(payload.url, { maxLength: 2000 });
+  const internalNotes = sanitizeOptionalText(payload.internalNotes, { maxLength: 20000 }) || '';
   const sortOrder = normalizeSortOrder(payload.sortOrder, 0);
   const tags = Array.isArray(payload.tags) ? payload.tags : [];
 
   const createdEntryId = await withTransaction(async (db) => {
     const result = await db.query(`
-      INSERT INTO bookshelf_entries (title, author, status, is_online, url, sort_order)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO bookshelf_entries (title, author, status, is_online, url, internal_notes, sort_order)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id
-    `, [title, author, status, isOnline, url, sortOrder]);
+    `, [title, author, status, isOnline, url, internalNotes, sortOrder]);
 
     const entryId = Number(result.rows[0].id);
     await syncBookshelfTags(entryId, tags, db);
     return entryId;
   });
 
-  return getBookshelfEntryById(createdEntryId);
+  return getBookshelfEntryById(createdEntryId, { includeInternalNotes: true });
 }
 
 async function updateBookshelfEntry(entryId, payload) {
@@ -1679,7 +1688,7 @@ async function updateBookshelfEntry(entryId, payload) {
       return null;
     }
 
-    const existing = await getBookshelfEntryById(entryId);
+    const existing = await getBookshelfEntryById(entryId, { includeInternalNotes: true });
 
     const nextTitle = payload.title !== undefined
       ? sanitizeRequiredTextWithLimit(payload.title, 'title', 200)
@@ -1699,12 +1708,15 @@ async function updateBookshelfEntry(entryId, payload) {
     const nextSortOrder = payload.sortOrder !== undefined
       ? normalizeSortOrder(payload.sortOrder, existing.sortOrder)
       : existing.sortOrder;
+    const nextInternalNotes = payload.internalNotes !== undefined
+      ? sanitizeOptionalText(payload.internalNotes, { maxLength: 20000 }) || ''
+      : existing.internalNotes;
 
     await db.query(`
       UPDATE bookshelf_entries
-      SET title = $1, author = $2, status = $3, is_online = $4, url = $5, sort_order = $6, updated_at = NOW()
-      WHERE id = $7
-    `, [nextTitle, nextAuthor, nextStatus, nextIsOnline, nextUrl, nextSortOrder, entryId]);
+      SET title = $1, author = $2, status = $3, is_online = $4, url = $5, internal_notes = $6, sort_order = $7, updated_at = NOW()
+      WHERE id = $8
+    `, [nextTitle, nextAuthor, nextStatus, nextIsOnline, nextUrl, nextInternalNotes, nextSortOrder, entryId]);
 
     if (payload.tags !== undefined) {
       const tags = Array.isArray(payload.tags) ? payload.tags : [];
@@ -1718,7 +1730,7 @@ async function updateBookshelfEntry(entryId, payload) {
     return null;
   }
 
-  return getBookshelfEntryById(updatedEntryId);
+  return getBookshelfEntryById(updatedEntryId, { includeInternalNotes: true });
 }
 
 async function deleteBookshelfEntry(entryId) {
