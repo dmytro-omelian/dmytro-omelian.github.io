@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createAdminReadingListEntry,
   deleteAdminReadingListEntry,
@@ -6,6 +6,15 @@ import {
   updateAdminReadingListEntry,
 } from '../../api/siteData';
 import { renderMarkdownToHtml } from '../../utils/markdown';
+import {
+  AdminCommandPalette,
+  AdminMcpConfigButton,
+  AdminWorkspaceSwitch,
+  createSearchText,
+  createTagSearchParts,
+  matchesSearchQuery,
+  useAdminKeyboardShortcuts,
+} from './adminControls';
 import {
   getBookSummary,
   groupBooksByYear,
@@ -121,34 +130,6 @@ function getNextSortOrder(books, year) {
   return maxSortOrder + 1;
 }
 
-function WorkspaceSwitch({ activeWorkspace, onWorkspaceChange }) {
-  return (
-    <div className="admin-workspace-switch" role="tablist" aria-label="Admin workspaces">
-      <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'questions' ? ' is-active' : ''}`}
-        type="button"
-        onClick={() => onWorkspaceChange('questions')}
-      >
-        Questions
-      </button>
-      <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'readingList' ? ' is-active' : ''}`}
-        type="button"
-        onClick={() => onWorkspaceChange('readingList')}
-      >
-        Reading list
-      </button>
-      <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'bookshelf' ? ' is-active' : ''}`}
-        type="button"
-        onClick={() => onWorkspaceChange('bookshelf')}
-      >
-        Bookshelf
-      </button>
-    </div>
-  );
-}
-
 function ReadingListWorkspace({
   adminKeyword,
   activeWorkspace,
@@ -163,18 +144,28 @@ function ReadingListWorkspace({
   const [statusMessage, setStatusMessage] = useState('');
 
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const newBookTitleInputRef = useRef(null);
 
   const selectedBook = useMemo(
     () => books.find((book) => book.id === selectedBookId) || null,
     [books, selectedBookId],
   );
   const filteredBooks = useMemo(() => {
-    const query = sidebarSearch.trim().toLowerCase();
-    if (!query) return books;
-    return books.filter((book) =>
-      book.title.toLowerCase().includes(query)
-      || book.author.toLowerCase().includes(query)
-    );
+    if (!sidebarSearch.trim()) return books;
+
+    return books.filter((book) => matchesSearchQuery(createSearchText([
+      book.year,
+      book.title,
+      book.author,
+      book.slug,
+      book.summaryMarkdown,
+      book.relatedPostSlug,
+      book.relatedPostLabel,
+      book.finishedOn,
+      book.score,
+      createTagSearchParts(book.tags),
+    ]), sidebarSearch));
   }, [books, sidebarSearch]);
   const booksByYear = useMemo(() => groupBooksByYear(filteredBooks), [filteredBooks]);
 
@@ -211,6 +202,66 @@ function ReadingListWorkspace({
     loadBooks(adminKeyword);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminKeyword]);
+
+  useAdminKeyboardShortcuts({
+    isCommandPaletteOpen,
+    onOpenCommandPalette: () => setIsCommandPaletteOpen(true),
+    onCloseCommandPalette: () => setIsCommandPaletteOpen(false),
+    onSave: handleSaveBook,
+    onClose: () => {
+      if (!sidebarSearch) {
+        return false;
+      }
+
+      setSidebarSearch('');
+      return true;
+    },
+  });
+
+  const commandPaletteCommands = [
+    {
+      id: 'save-selected-book',
+      label: 'Save selected book',
+      detail: selectedBook ? selectedBook.title : 'No book selected',
+      shortcut: '⌘↵',
+      disabled: !selectedBook,
+      action: handleSaveBook,
+    },
+    {
+      id: 'refresh-reading-list',
+      label: 'Refresh reading list',
+      detail: 'Reload books from the server',
+      action: () => loadBooks(adminKeyword, selectedBookId),
+    },
+    {
+      id: 'focus-new-book',
+      label: 'New book title',
+      detail: 'Move to the create form',
+      action: () => {
+        newBookTitleInputRef.current?.focus();
+      },
+    },
+    {
+      id: 'clear-reading-search',
+      label: 'Clear search',
+      detail: sidebarSearch ? sidebarSearch : 'Search is empty',
+      shortcut: 'Esc',
+      disabled: !sidebarSearch,
+      action: () => setSidebarSearch(''),
+    },
+    {
+      id: 'open-bookshelf',
+      label: 'Open Bookshelf',
+      detail: 'Switch admin workspace',
+      action: () => onWorkspaceChange('bookshelf'),
+    },
+    {
+      id: 'logout-admin',
+      label: 'Logout',
+      detail: 'End the admin session',
+      action: onLogout,
+    },
+  ];
 
   function handleBookFieldChange(fieldName, value) {
     setBooks((currentBooks) => currentBooks.map((book) => (
@@ -346,16 +397,27 @@ function ReadingListWorkspace({
             <p className="admin-sidebar-label">Admin</p>
             <h1>Reading list</h1>
           </div>
-          <button
-            className="admin-ghost-button"
-            type="button"
-            onClick={onLogout}
-          >
-            Logout
-          </button>
+          <div className="admin-top-actions">
+            <button
+              className="admin-command-trigger"
+              type="button"
+              onClick={() => setIsCommandPaletteOpen(true)}
+              aria-label="Open admin search"
+            >
+              ⌘K
+            </button>
+            <AdminMcpConfigButton adminKeyword={adminKeyword} />
+            <button
+              className="admin-ghost-button"
+              type="button"
+              onClick={onLogout}
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        <WorkspaceSwitch
+        <AdminWorkspaceSwitch
           activeWorkspace={activeWorkspace}
           onWorkspaceChange={onWorkspaceChange}
         />
@@ -382,6 +444,7 @@ function ReadingListWorkspace({
             <label className="admin-field">
               <span>Title</span>
               <input
+                ref={newBookTitleInputRef}
                 type="text"
                 value={newBookDraft.title}
                 onChange={(event) => setNewBookDraft((currentDraft) => ({
@@ -673,7 +736,8 @@ function ReadingListWorkspace({
               type="text"
               value={sidebarSearch}
               onChange={(event) => setSidebarSearch(event.target.value)}
-              placeholder="Search books..."
+              placeholder="Search words, authors, notes..."
+              aria-label="Search reading list"
             />
             {sidebarSearch && (
               <span className="admin-sidebar-search-count">
@@ -712,6 +776,16 @@ function ReadingListWorkspace({
           {!isLoadingBooks && books.length === 0 && <p className="admin-side-note">No books yet.</p>}
         </div>
       </section>
+
+      <AdminCommandPalette
+        commands={commandPaletteCommands}
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSearchChange={setSidebarSearch}
+        searchPlaceholder="Search books or run a command..."
+        searchResultLabel={`${filteredBooks.length} matching book${filteredBooks.length !== 1 ? 's' : ''}`}
+        searchValue={sidebarSearch}
+      />
     </div>
   );
 }

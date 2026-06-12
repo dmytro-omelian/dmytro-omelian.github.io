@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import './Admin.css';
-import { getAdminQuestions } from '../../api/siteData';
+import { getAdminReadingList } from '../../api/siteData';
 import BookshelfWorkspace from './BookshelfWorkspace';
-import QuestionsWorkspace from './QuestionsWorkspace';
 import ReadingListWorkspace from './ReadingListWorkspace';
 
 const ADMIN_SESSION_KEY = 'site_admin_keyword_v2';
@@ -54,7 +53,7 @@ function Admin() {
     setAuthError('');
 
     try {
-      await getAdminQuestions(trimmedKeyword);
+      await getAdminReadingList(trimmedKeyword);
       storeKeyword(trimmedKeyword);
       setAdminKeyword(trimmedKeyword);
       setKeywordInput('');
@@ -81,7 +80,7 @@ function Admin() {
           <p className="admin-login-label">Admin</p>
           <h1>Enter keyword</h1>
           <p className="admin-login-copy">
-            Private access for editing questions, reading list entries, and comments.
+            Private access for editing reading list entries and bookshelf notes.
           </p>
 
           <label className="admin-input-group">
@@ -106,17 +105,6 @@ function Admin() {
           </button>
         </form>
       </div>
-    );
-  }
-
-  if (activeWorkspace === 'questions') {
-    return (
-      <QuestionsWorkspace
-        adminKeyword={adminKeyword}
-        activeWorkspace={activeWorkspace}
-        onLogout={handleLogout}
-        onWorkspaceChange={setActiveWorkspace}
-      />
     );
   }
 

@@ -6,6 +6,15 @@ import {
   getAdminBookshelf,
   updateAdminBookshelfEntry,
 } from '../../api/siteData';
+import {
+  AdminCommandPalette,
+  AdminMcpConfigButton,
+  AdminWorkspaceSwitch,
+  createSearchText,
+  createTagSearchParts,
+  matchesSearchQuery,
+  useAdminKeyboardShortcuts,
+} from './adminControls';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -17,6 +26,12 @@ const STATUS_LABELS = {
   active: 'Active',
   want_to_read: 'Want to Read',
   backlog: 'Backlog',
+};
+
+const QUICK_STATUS_ACTION_LABELS = {
+  active: 'Set Active',
+  want_to_read: 'Move to Want to Read',
+  backlog: 'Move to Backlog',
 };
 
 function getEmptyBookDraft() {
@@ -113,34 +128,6 @@ function groupByStatus(entries) {
     .map(({ value, label }) => ({ status: value, label, entries: grouped[value] }));
 }
 
-function WorkspaceSwitch({ activeWorkspace, onWorkspaceChange }) {
-  return (
-    <div className="admin-workspace-switch" role="tablist" aria-label="Admin workspaces">
-      <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'questions' ? ' is-active' : ''}`}
-        type="button"
-        onClick={() => onWorkspaceChange('questions')}
-      >
-        Questions
-      </button>
-      <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'readingList' ? ' is-active' : ''}`}
-        type="button"
-        onClick={() => onWorkspaceChange('readingList')}
-      >
-        Reading list
-      </button>
-      <button
-        className={`admin-workspace-switch-button${activeWorkspace === 'bookshelf' ? ' is-active' : ''}`}
-        type="button"
-        onClick={() => onWorkspaceChange('bookshelf')}
-      >
-        Bookshelf
-      </button>
-    </div>
-  );
-}
-
 function BookshelfWorkspace({
   adminKeyword,
   activeWorkspace,
@@ -155,6 +142,8 @@ function BookshelfWorkspace({
   const [workspaceError, setWorkspaceError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [openActionMenuEntryId, setOpenActionMenuEntryId] = useState(null);
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedEntryId) || null,
@@ -162,15 +151,19 @@ function BookshelfWorkspace({
   );
 
   const filteredEntries = useMemo(() => {
-    const query = sidebarSearch.trim().toLowerCase();
-    if (!query) return entries;
+    if (!sidebarSearch.trim()) return entries;
 
-    return entries.filter((entry) =>
-      entry.title.toLowerCase().includes(query)
-      || entry.author.toLowerCase().includes(query)
-      || String(entry.internalNotes || '').toLowerCase().includes(query)
-      || (entry.tags || []).some((tag) => tag.toLowerCase().includes(query))
-    );
+    return entries.filter((entry) => matchesSearchQuery(createSearchText([
+      entry.title,
+      entry.author,
+      entry.status,
+      STATUS_LABELS[entry.status],
+      entry.isOnline ? 'online' : '',
+      entry.url,
+      entry.sortOrder,
+      entry.internalNotes,
+      createTagSearchParts(entry.tags),
+    ]), sidebarSearch));
   }, [entries, sidebarSearch]);
 
   const entriesByStatus = useMemo(() => groupByStatus(filteredEntries), [filteredEntries]);
@@ -210,6 +203,109 @@ function BookshelfWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminKeyword]);
 
+  useEffect(() => {
+    if (openActionMenuEntryId === null || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    function closeActionMenu() {
+      setOpenActionMenuEntryId(null);
+    }
+
+    window.addEventListener('click', closeActionMenu);
+
+    return () => {
+      window.removeEventListener('click', closeActionMenu);
+    };
+  }, [openActionMenuEntryId]);
+
+  useAdminKeyboardShortcuts({
+    isCommandPaletteOpen,
+    onOpenCommandPalette: () => setIsCommandPaletteOpen(true),
+    onCloseCommandPalette: () => setIsCommandPaletteOpen(false),
+    onSave: () => {
+      if (isDrawerOpen) {
+        handleSaveDraft();
+      }
+    },
+    onClose: () => {
+      if (openActionMenuEntryId !== null) {
+        setOpenActionMenuEntryId(null);
+        return true;
+      }
+
+      if (isDrawerOpen) {
+        closeDrawer();
+        return true;
+      }
+
+      if (sidebarSearch) {
+        setSidebarSearch('');
+        return true;
+      }
+
+      return false;
+    },
+  });
+
+  const commandPaletteCommands = [
+    {
+      id: 'save-bookshelf-book',
+      label: 'Save book',
+      detail: isDrawerOpen ? draft.title || 'Untitled book' : 'No editor open',
+      shortcut: '⌘↵',
+      disabled: !isDrawerOpen,
+      action: handleSaveDraft,
+    },
+    {
+      id: 'close-bookshelf-editor',
+      label: 'Close editor',
+      detail: isDrawerOpen ? 'Close the bookshelf sidepanel' : 'Editor is closed',
+      shortcut: 'Esc',
+      disabled: !isDrawerOpen,
+      action: closeDrawer,
+    },
+    {
+      id: 'add-bookshelf-book',
+      label: 'Add book',
+      detail: 'Open a new bookshelf editor',
+      action: openCreateDrawer,
+    },
+    {
+      id: 'auto-tag-bookshelf-book',
+      label: 'Auto Tag',
+      detail: selectedEntry ? selectedEntry.title : 'Select a saved book first',
+      disabled: drawerMode !== 'edit' || !selectedEntry,
+      action: handleAutoTagEntry,
+    },
+    {
+      id: 'refresh-bookshelf',
+      label: 'Refresh bookshelf',
+      detail: 'Reload books from the server',
+      action: () => loadEntries(adminKeyword, selectedEntryId),
+    },
+    {
+      id: 'clear-bookshelf-search',
+      label: 'Clear search',
+      detail: sidebarSearch ? sidebarSearch : 'Search is empty',
+      shortcut: 'Esc',
+      disabled: !sidebarSearch,
+      action: () => setSidebarSearch(''),
+    },
+    {
+      id: 'open-reading-list',
+      label: 'Open Reading list',
+      detail: 'Switch admin workspace',
+      action: () => onWorkspaceChange('readingList'),
+    },
+    {
+      id: 'logout-admin',
+      label: 'Logout',
+      detail: 'End the admin session',
+      action: onLogout,
+    },
+  ];
+
   function openCreateDrawer() {
     setWorkspaceError('');
     setStatusMessage('');
@@ -221,6 +317,7 @@ function BookshelfWorkspace({
   function openEditDrawer(entry) {
     setWorkspaceError('');
     setStatusMessage('');
+    setOpenActionMenuEntryId(null);
     setSelectedEntryId(entry.id);
     setDraft(getDraftFromEntry(entry));
     setDrawerMode('edit');
@@ -228,6 +325,11 @@ function BookshelfWorkspace({
 
   function closeDrawer() {
     setDrawerMode(null);
+  }
+
+  function toggleActionMenu(event, entryId) {
+    event.stopPropagation();
+    setOpenActionMenuEntryId((currentEntryId) => (currentEntryId === entryId ? null : entryId));
   }
 
   function updateDraft(fieldName, value) {
@@ -296,6 +398,41 @@ function BookshelfWorkspace({
     }
   }
 
+  async function handleQuickStatusChange(event, entry, nextStatus) {
+    event.stopPropagation();
+
+    if (entry.status === nextStatus) {
+      setOpenActionMenuEntryId(null);
+      return;
+    }
+
+    setWorkspaceError('');
+    setStatusMessage('');
+
+    try {
+      const result = await updateAdminBookshelfEntry(adminKeyword, entry.id, {
+        title: String(entry.title || '').trim(),
+        author: String(entry.author || '').trim(),
+        status: nextStatus,
+        isOnline: Boolean(entry.isOnline),
+        url: String(entry.url || '').trim() || null,
+        sortOrder: entry.sortOrder,
+        tags: parseTags(entry.tags),
+        internalNotes: String(entry.internalNotes || '').trim(),
+      });
+
+      if (selectedEntryId === entry.id && result.entry) {
+        setDraft(getDraftFromEntry(result.entry));
+      }
+
+      setOpenActionMenuEntryId(null);
+      await loadEntries(adminKeyword, entry.id);
+      setStatusMessage(`Moved "${entry.title}" to ${STATUS_LABELS[nextStatus]}.`);
+    } catch (error) {
+      setWorkspaceError(error.message);
+    }
+  }
+
   async function handleDeleteEntry() {
     if (!selectedEntry) {
       return;
@@ -328,16 +465,27 @@ function BookshelfWorkspace({
             <p className="admin-sidebar-label">Admin</p>
             <h1>Bookshelf</h1>
           </div>
-          <button
-            className="admin-ghost-button"
-            type="button"
-            onClick={onLogout}
-          >
-            Logout
-          </button>
+          <div className="admin-top-actions">
+            <button
+              className="admin-command-trigger"
+              type="button"
+              onClick={() => setIsCommandPaletteOpen(true)}
+              aria-label="Open admin search"
+            >
+              ⌘K
+            </button>
+            <AdminMcpConfigButton adminKeyword={adminKeyword} />
+            <button
+              className="admin-ghost-button"
+              type="button"
+              onClick={onLogout}
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        <WorkspaceSwitch
+        <AdminWorkspaceSwitch
           activeWorkspace={activeWorkspace}
           onWorkspaceChange={onWorkspaceChange}
         />
@@ -356,7 +504,8 @@ function BookshelfWorkspace({
               type="text"
               value={sidebarSearch}
               onChange={(event) => setSidebarSearch(event.target.value)}
-              placeholder="Search books..."
+              placeholder="Search words or tags..."
+              aria-label="Search bookshelf"
             />
             {sidebarSearch && (
               <span className="admin-sidebar-search-count">
@@ -427,16 +576,29 @@ function BookshelfWorkspace({
               <h3>## {label}</h3>
               <div className="admin-bookshelf-md-list">
                 {statusEntries.map((entry) => (
-                  <button
+                  <div
                     className={`admin-bookshelf-md-row${entry.id === selectedEntryId ? ' is-active' : ''}`}
                     key={entry.id}
-                    type="button"
-                    onClick={() => openEditDrawer(entry)}
                   >
-                    <span className="admin-bookshelf-md-line">
+                    <button
+                      className="admin-bookshelf-md-line"
+                      type="button"
+                      onClick={() => openEditDrawer(entry)}
+                    >
                       <span className="admin-bookshelf-md-book">
                         <span className="admin-bookshelf-md-prefix">-</span>
                         <span className="admin-bookshelf-md-title">{entry.title}</span>
+                        {entry.internalNotes && (
+                          <span
+                            className="admin-bookshelf-md-note-icon"
+                            title={truncateText(entry.internalNotes, 240)}
+                            aria-hidden="true"
+                          >
+                            <svg viewBox="0 0 24 24" focusable="false">
+                              <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 17 0Z" />
+                            </svg>
+                          </span>
+                        )}
                         <span className="admin-bookshelf-md-author">by {entry.author}</span>
                       </span>
                       <span className="admin-bookshelf-md-tags" aria-label="Book tags">
@@ -444,17 +606,41 @@ function BookshelfWorkspace({
                         {(entry.tags || []).map((tag) => (
                           <code className="admin-bookshelf-md-tag" key={tag}>{tag}</code>
                         ))}
-                        {entry.internalNotes && (
-                          <code
-                            className="admin-bookshelf-md-tag admin-bookshelf-md-note-tag"
-                            title={truncateText(entry.internalNotes, 240)}
-                          >
-                            note
-                          </code>
-                        )}
                       </span>
+                    </button>
+                    <span className="admin-bookshelf-md-actions" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        className="admin-bookshelf-md-action-trigger"
+                        type="button"
+                        aria-label={`Quick actions for ${entry.title}`}
+                        aria-expanded={openActionMenuEntryId === entry.id}
+                        onClick={(event) => toggleActionMenu(event, entry.id)}
+                      >
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                          <circle cx="5" cy="12" r="1.8" />
+                          <circle cx="12" cy="12" r="1.8" />
+                          <circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+
+                      {openActionMenuEntryId === entry.id && (
+                        <div className="admin-bookshelf-md-action-menu" role="menu">
+                          {STATUS_OPTIONS.map(({ value }) => (
+                            <button
+                              className="admin-bookshelf-md-action-menu-item"
+                              disabled={entry.status === value}
+                              key={value}
+                              type="button"
+                              role="menuitem"
+                              onClick={(event) => handleQuickStatusChange(event, entry, value)}
+                            >
+                              {entry.status === value ? `Current: ${STATUS_LABELS[value]}` : QUICK_STATUS_ACTION_LABELS[value]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </span>
-                  </button>
+                  </div>
                 ))}
               </div>
             </section>
@@ -614,6 +800,16 @@ function BookshelfWorkspace({
           </aside>
         </>
       )}
+
+      <AdminCommandPalette
+        commands={commandPaletteCommands}
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSearchChange={setSidebarSearch}
+        searchPlaceholder="Search books, tags, or run a command..."
+        searchResultLabel={`${filteredEntries.length} matching book${filteredEntries.length !== 1 ? 's' : ''}`}
+        searchValue={sidebarSearch}
+      />
     </div>
   );
 }

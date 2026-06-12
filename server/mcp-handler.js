@@ -20,7 +20,7 @@ const {
 
 const SERVER_NAME = 'dmytro_website';
 const SERVER_TITLE = 'Dmytro Omelian Website MCP';
-const SERVER_DESCRIPTION = "Public, read-only MCP server for Dmytro Omelian\u2019s profile, timeline, blog, and bookshelf.";
+const SERVER_DESCRIPTION = "Public MCP server for Dmytro Omelian\u2019s profile, timeline, blog, and bookshelf. Private bookshelf notes require an admin API key.";
 const RESOURCE_SCHEME = 'portfolio';
 const DEFAULT_PROTOCOL_VERSION = '2025-03-26';
 const LATEST_PROTOCOL_VERSION = '2025-11-25';
@@ -207,6 +207,11 @@ const TOOL_DEFINITIONS = [
           maximum: 500,
           default: 100,
         },
+        includePrivateNotes: {
+          type: 'boolean',
+          description: 'Include private bookshelf notes. Requires x-admin-key or Authorization: Bearer <key>.',
+          default: false,
+        },
       },
       additionalProperties: false,
     },
@@ -251,6 +256,35 @@ function getHeaderValue(headers, headerName) {
   const headerValue = matchingKey ? headers[matchingKey] : '';
   const normalizedValue = Array.isArray(headerValue) ? headerValue[0] : headerValue;
   return String(normalizedValue || '').trim();
+}
+
+function getAdminKeyFromHeaders(headers) {
+  const directKey = getHeaderValue(headers, 'x-admin-key');
+
+  if (directKey) {
+    return directKey;
+  }
+
+  const authorization = getHeaderValue(headers, 'authorization');
+  const bearerMatch = authorization.match(/^Bearer\s+(.+)$/i);
+
+  return bearerMatch ? bearerMatch[1].trim() : '';
+}
+
+function hasPrivateMcpAccess(headers) {
+  const adminApiKey = (process.env.ADMIN_API_KEY || '').trim();
+
+  if (!adminApiKey) {
+    return false;
+  }
+
+  return getAdminKeyFromHeaders(headers) === adminApiKey;
+}
+
+function ensurePrivateMcpAccess(headers) {
+  if (!hasPrivateMcpAccess(headers)) {
+    throw createHttpError(401, 'Private notes require a valid admin API key.');
+  }
 }
 
 function normalizeHostname(hostname) {
@@ -455,7 +489,8 @@ function negotiateProtocolVersion(requestedVersion) {
 
 function getServerInstructions() {
   return [
-    'Use this server as public, read-only context about Dmytro Omelian.',
+    'Use this server as public context about Dmytro Omelian.',
+    'Private bookshelf notes are available only when the request includes a valid admin API key.',
     'Prefer exact dates and distinguish between blog posts, reading notes, and career timeline items.',
     'If information is not present in the resources or tool results, say so instead of guessing.',
   ].join(' ');
@@ -480,7 +515,7 @@ const BOOKSHELF_STATUS_LABELS = {
 
 const BOOKSHELF_STATUS_ORDER = ['active', 'want_to_read', 'backlog'];
 
-function renderBookshelfMarkdown(entries, { statusFilter, tagFilter } = {}) {
+function renderBookshelfMarkdown(entries, { statusFilter, tagFilter, includePrivateNotes = false } = {}) {
   if (entries.length === 0) {
     const filters = [statusFilter, tagFilter].filter(Boolean).join(', ');
     return filters
@@ -506,7 +541,10 @@ function renderBookshelfMarkdown(entries, { statusFilter, tagFilter } = {}) {
       const lines = grouped[status].map((e) => {
         const tags = (e.tags || []).length > 0 ? ` [${e.tags.join(', ')}]` : '';
         const online = e.isOnline ? ' (online)' : '';
-        return `- **${e.title}** — ${e.author}${online}${tags}`;
+        const privateNotes = includePrivateNotes && e.internalNotes
+          ? `\n  - Private notes: ${e.internalNotes.replace(/\n+/g, '\n    ')}`
+          : '';
+        return `- **${e.title}** — ${e.author}${online}${tags}${privateNotes}`;
       });
       return `## ${label} (${grouped[status].length})\n\n${lines.join('\n')}`;
     });
@@ -775,7 +813,7 @@ async function searchSiteContent({ query, limit }) {
     .slice(0, limit);
 }
 
-async function callTool(name, args = {}) {
+async function callTool(name, args = {}, context = {}) {
   const staticContext = await getStaticContext();
 
   if (name === 'get_profile_overview') {
@@ -891,8 +929,13 @@ async function callTool(name, args = {}) {
     const limit = normalizeLimit(args.limit, 100, { min: 1, max: 500 });
     const statusFilter = args.status || null;
     const tagFilter = args.tag ? String(args.tag).trim().toLowerCase() : null;
+    const includePrivateNotes = normalizeBoolean(args.includePrivateNotes, false);
 
-    let allEntries = await getBookshelfEntries();
+    if (includePrivateNotes) {
+      ensurePrivateMcpAccess(context.headers);
+    }
+
+    let allEntries = await getBookshelfEntries({ includeInternalNotes: includePrivateNotes });
 
     if (statusFilter) {
       allEntries = allEntries.filter((e) => e.status === statusFilter);
@@ -907,12 +950,13 @@ async function callTool(name, args = {}) {
     const entries = allEntries.slice(0, limit);
 
     return createToolResult({
-      text: renderBookshelfMarkdown(entries, { statusFilter, tagFilter }),
+      text: renderBookshelfMarkdown(entries, { statusFilter, tagFilter, includePrivateNotes }),
       structuredContent: {
         totalCount: allEntries.length,
         returnedCount: entries.length,
         statusFilter,
         tagFilter,
+        includePrivateNotes,
         entries: entries.map((e) => ({
           id: e.id,
           title: e.title,
@@ -920,6 +964,7 @@ async function callTool(name, args = {}) {
           status: e.status,
           isOnline: e.isOnline,
           tags: e.tags || [],
+          ...(includePrivateNotes ? { internalNotes: e.internalNotes || '' } : {}),
         })),
       },
       resourceLinks: [
@@ -984,6 +1029,19 @@ function buildDocsPayload(requestUrl) {
       sessions: false,
       notes: 'Use HTTP POST for JSON-RPC requests. This endpoint returns JSON responses and does not expose SSE streams.',
     },
+    authentication: {
+      requiredForPublicContent: false,
+      privateNotes: {
+        required: true,
+        headers: ['x-admin-key', 'Authorization: Bearer <admin-key>'],
+        toolCall: {
+          name: 'get_bookshelf',
+          arguments: {
+            includePrivateNotes: true,
+          },
+        },
+      },
+    },
     supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS,
     capabilities: {
       prompts: true,
@@ -1023,6 +1081,17 @@ function buildDocsPayload(requestUrl) {
           name: 'get_blog_post',
           arguments: {
             slug: 'read-this-before-your-next-long-project',
+          },
+        },
+      },
+      getBookshelfWithPrivateNotes: {
+        jsonrpc: JSON_RPC_VERSION,
+        id: 4,
+        method: 'tools/call',
+        params: {
+          name: 'get_bookshelf',
+          arguments: {
+            includePrivateNotes: true,
           },
         },
       },
@@ -1139,6 +1208,7 @@ async function handleJsonRpcMessage(message, { headers, requestUrl }) {
             await callTool(
               String(message.params?.name || '').trim(),
               message.params?.arguments || {},
+              { headers, requestUrl },
             ),
           ),
         };

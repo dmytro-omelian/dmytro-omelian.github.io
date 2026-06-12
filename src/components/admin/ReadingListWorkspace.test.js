@@ -1,6 +1,6 @@
 import React from 'react';
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ReadingListWorkspace from './ReadingListWorkspace';
 import {
   createAdminReadingListEntry,
@@ -54,6 +54,7 @@ function renderWorkspace() {
 
 describe('ReadingListWorkspace', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     getAdminReadingList.mockResolvedValue(baseBooks);
     createAdminReadingListEntry.mockResolvedValue({
       book: {
@@ -133,5 +134,56 @@ describe('ReadingListWorkspace', () => {
 
     expect(updateAdminReadingListEntry).not.toHaveBeenCalled();
     expect(screen.getByText('Year, title, author, and slug are required.')).toBeInTheDocument();
+  });
+
+  test('filters by all entered words across searchable book fields', async () => {
+    renderWorkspace();
+
+    expect(await screen.findByDisplayValue('One')).toBeInTheDocument();
+
+    const searchInput = screen.getByLabelText('Search reading list');
+    await userEvent.type(searchInput, 'summary one');
+
+    expect(screen.getByText('1 result')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /One/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Two/ })).not.toBeInTheDocument();
+
+    await userEvent.clear(searchInput);
+    await userEvent.type(searchInput, 'author two');
+
+    expect(screen.getByText('1 result')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Two/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /One/ })).not.toBeInTheDocument();
+  });
+
+  test('supports command palette, escape close, and command-enter save', async () => {
+    renderWorkspace();
+
+    expect(await screen.findByDisplayValue('One')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'k', metaKey: true });
+    expect(screen.getByRole('dialog', { name: 'Admin command menu' })).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Search admin'), 'summary one');
+    expect(screen.getByText('1 matching book')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Admin command menu' })).not.toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('Search reading list')).toHaveValue('summary one');
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByLabelText('Search reading list')).toHaveValue('');
+
+    fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+
+    await waitFor(() => {
+      expect(updateAdminReadingListEntry).toHaveBeenCalledWith('secret', 1, expect.objectContaining({
+        title: 'One',
+        author: 'Author One',
+        slug: 'one',
+      }));
+    });
   });
 });
