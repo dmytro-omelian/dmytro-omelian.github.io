@@ -2,10 +2,12 @@ require('./loadEnv');
 
 const packageJson = require('../package.json');
 const {
+  createReadingListEntry,
   createHttpError,
   getAllPostViews,
   getBookshelfEntries,
   getBlogCommentCounts,
+  getReadingListEntries,
 } = require('./db');
 const {
   createExcerpt,
@@ -20,7 +22,7 @@ const {
 
 const SERVER_NAME = 'dmytro_website';
 const SERVER_TITLE = 'Dmytro Omelian Website MCP';
-const SERVER_DESCRIPTION = "Public MCP server for Dmytro Omelian\u2019s profile, timeline, blog, and bookshelf. Private bookshelf notes require an admin API key.";
+const SERVER_DESCRIPTION = "Public MCP server for Dmytro Omelian\u2019s profile, timeline, blog, bookshelf, and reading list. Private notes and writes require an admin API key.";
 const RESOURCE_SCHEME = 'portfolio';
 const DEFAULT_PROTOCOL_VERSION = '2025-03-26';
 const LATEST_PROTOCOL_VERSION = '2025-11-25';
@@ -217,6 +219,87 @@ const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'add_missing_reading_list_books',
+    title: 'Add missing reading-list books',
+    description: 'Create reading-list entries for books that are not already present by title+author or slug. Requires x-admin-key or Authorization: Bearer <key>.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        books: {
+          type: 'array',
+          description: 'Books to add if missing.',
+          minItems: 1,
+          maxItems: 50,
+          items: {
+            type: 'object',
+            properties: {
+              year: {
+                type: 'integer',
+                description: 'Reading-list year.',
+                minimum: 1,
+              },
+              title: {
+                type: 'string',
+                description: 'Book title in the visible/original language of the edition.',
+                minLength: 1,
+                maxLength: 200,
+              },
+              author: {
+                type: 'string',
+                description: 'Book author in the visible/original language of the edition.',
+                minLength: 1,
+                maxLength: 200,
+              },
+              slug: {
+                type: 'string',
+                description: 'Optional URL slug. If omitted, a unique slug is generated from the title.',
+                maxLength: 160,
+              },
+              summaryMarkdown: {
+                type: 'string',
+                description: 'Optional reading summary in Markdown.',
+                maxLength: 20000,
+              },
+              relatedPostSlug: {
+                type: 'string',
+                description: 'Optional related blog slug, /blog/... path, or URL.',
+                maxLength: 2048,
+              },
+              relatedPostLabel: {
+                type: 'string',
+                description: 'Optional label for the related blog post link.',
+                maxLength: 120,
+              },
+              finishedOn: {
+                type: 'string',
+                description: 'Optional finish date, preferably YYYY-MM-DD.',
+              },
+              score: {
+                type: 'number',
+                description: 'Optional score from 0 to 5.',
+                minimum: 0,
+                maximum: 5,
+              },
+              sortOrder: {
+                type: 'integer',
+                description: 'Optional year-local sort order. Defaults to the end of the year.',
+              },
+            },
+            required: ['year', 'title', 'author'],
+            additionalProperties: false,
+          },
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview which books would be created without writing to the database.',
+          default: false,
+        },
+      },
+      required: ['books'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'search_site_content',
     title: 'Search site content',
     description: 'Search across about, experience, news, blog, and bookshelf content.',
@@ -283,7 +366,7 @@ function hasPrivateMcpAccess(headers) {
 
 function ensurePrivateMcpAccess(headers) {
   if (!hasPrivateMcpAccess(headers)) {
-    throw createHttpError(401, 'Private notes require a valid admin API key.');
+    throw createHttpError(401, 'Private MCP access requires a valid admin API key.');
   }
 }
 
@@ -359,6 +442,156 @@ function normalizeLimit(value, fallback, { min = 1, max = 50 } = {}) {
   }
 
   return Math.max(min, Math.min(max, Math.trunc(numericValue)));
+}
+
+function normalizeRequiredInteger(value, fieldName, { min, max } = {}) {
+  if (value === undefined || value === null || value === '') {
+    throw createHttpError(400, `${fieldName} is required.`);
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isInteger(numericValue)) {
+    throw createHttpError(400, `${fieldName} must be an integer.`);
+  }
+
+  if (min !== undefined && numericValue < min) {
+    throw createHttpError(400, `${fieldName} must be at least ${min}.`);
+  }
+
+  if (max !== undefined && numericValue > max) {
+    throw createHttpError(400, `${fieldName} must be at most ${max}.`);
+  }
+
+  return numericValue;
+}
+
+function normalizeOptionalInteger(value, fieldName) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  return normalizeRequiredInteger(value, fieldName);
+}
+
+function normalizeRequiredText(value, fieldName, { maxLength } = {}) {
+  const normalizedValue = String(value ?? '').trim();
+
+  if (!normalizedValue) {
+    throw createHttpError(400, `${fieldName} is required.`);
+  }
+
+  if (maxLength && normalizedValue.length > maxLength) {
+    throw createHttpError(400, `${fieldName} must be at most ${maxLength} characters.`);
+  }
+
+  return normalizedValue;
+}
+
+function normalizeOptionalText(value, fieldName, { maxLength } = {}) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const normalizedValue = String(value).trim();
+
+  if (!normalizedValue) {
+    return undefined;
+  }
+
+  if (maxLength && normalizedValue.length > maxLength) {
+    throw createHttpError(400, `${fieldName} must be at most ${maxLength} characters.`);
+  }
+
+  return normalizedValue;
+}
+
+function slugifyReadingListValue(input) {
+  return String(input ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}\s-]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function normalizeReadingListDuplicatePart(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getReadingListDuplicateKey(book) {
+  return [
+    normalizeReadingListDuplicatePart(book.title),
+    normalizeReadingListDuplicatePart(book.author),
+  ].join('::');
+}
+
+function getUniqueReadingListSlug(book, usedSlugs) {
+  const explicitSlug = normalizeOptionalText(book.slug, 'slug', { maxLength: 160 });
+  const baseSlug = slugifyReadingListValue(explicitSlug || book.title) || 'book';
+  const authorSlug = slugifyReadingListValue(book.author);
+  let candidate = baseSlug;
+
+  if (!explicitSlug && usedSlugs.has(candidate) && authorSlug) {
+    candidate = `${baseSlug}-${authorSlug}`.slice(0, 150).replace(/-+$/g, '');
+  }
+
+  let uniqueSlug = candidate;
+  let suffix = 2;
+
+  while (usedSlugs.has(uniqueSlug)) {
+    const suffixText = `-${suffix}`;
+    uniqueSlug = `${candidate.slice(0, 160 - suffixText.length).replace(/-+$/g, '')}${suffixText}`;
+    suffix += 1;
+  }
+
+  return uniqueSlug;
+}
+
+function normalizeReadingListBookPayload(book, index, usedSlugs) {
+  if (!book || typeof book !== 'object' || Array.isArray(book)) {
+    throw createHttpError(400, `books[${index}] must be an object.`);
+  }
+
+  const payload = {
+    year: normalizeRequiredInteger(book.year, `books[${index}].year`, { min: 1 }),
+    title: normalizeRequiredText(book.title, `books[${index}].title`, { maxLength: 200 }),
+    author: normalizeRequiredText(book.author, `books[${index}].author`, { maxLength: 200 }),
+  };
+
+  payload.slug = getUniqueReadingListSlug({
+    ...book,
+    title: payload.title,
+    author: payload.author,
+  }, usedSlugs);
+
+  const summaryMarkdown = normalizeOptionalText(book.summaryMarkdown, `books[${index}].summaryMarkdown`, { maxLength: 20000 });
+  const relatedPostSlug = normalizeOptionalText(book.relatedPostSlug, `books[${index}].relatedPostSlug`, { maxLength: 2048 });
+  const relatedPostLabel = normalizeOptionalText(book.relatedPostLabel, `books[${index}].relatedPostLabel`, { maxLength: 120 });
+  const finishedOn = normalizeOptionalText(book.finishedOn, `books[${index}].finishedOn`);
+  const score = book.score === undefined || book.score === null || book.score === ''
+    ? undefined
+    : Number(book.score);
+  const sortOrder = normalizeOptionalInteger(book.sortOrder, `books[${index}].sortOrder`);
+
+  if (score !== undefined && (!Number.isFinite(score) || score < 0 || score > 5)) {
+    throw createHttpError(400, `books[${index}].score must be between 0 and 5.`);
+  }
+
+  if (summaryMarkdown !== undefined) payload.summaryMarkdown = summaryMarkdown;
+  if (relatedPostSlug !== undefined) payload.relatedPostSlug = relatedPostSlug;
+  if (relatedPostLabel !== undefined) payload.relatedPostLabel = relatedPostLabel;
+  if (finishedOn !== undefined) payload.finishedOn = finishedOn;
+  if (score !== undefined) payload.score = score;
+  if (sortOrder !== undefined) payload.sortOrder = sortOrder;
+
+  return payload;
 }
 
 function toMarkdownList(title, items, formatter) {
@@ -490,7 +723,7 @@ function negotiateProtocolVersion(requestedVersion) {
 function getServerInstructions() {
   return [
     'Use this server as public context about Dmytro Omelian.',
-    'Private bookshelf notes are available only when the request includes a valid admin API key.',
+    'Private bookshelf notes and reading-list write tools are available only when the request includes a valid admin API key.',
     'Prefer exact dates and distinguish between blog posts, reading notes, and career timeline items.',
     'If information is not present in the resources or tool results, say so instead of guessing.',
   ].join(' ');
@@ -500,7 +733,8 @@ function buildRulesMarkdown() {
   return [
     '# Usage rules',
     '',
-    '- This server is public and read-only.',
+    '- Public resources and tools are read-only.',
+    '- Private MCP writes require a valid admin API key.',
     '- Prefer exact dates when summarizing experience, updates, or blog posts.',
     '- If information is missing from the provided resources or tool results, say so explicitly.',
     '- When possible, cite the resource URI or tool result you used.',
@@ -813,7 +1047,176 @@ async function searchSiteContent({ query, limit }) {
     .slice(0, limit);
 }
 
+function createReadingListBookReference(book) {
+  return {
+    id: book.id ?? null,
+    year: book.year,
+    title: book.title,
+    author: book.author,
+    slug: book.slug,
+  };
+}
+
+function formatReadingListBookLine(book) {
+  return `- ${book.year}: **${book.title}** — ${book.author} (${book.slug})`;
+}
+
+async function addMissingReadingListBooks(args = {}, context = {}) {
+  ensurePrivateMcpAccess(context.headers);
+
+  if (!Array.isArray(args.books)) {
+    throw createHttpError(400, 'books must be an array.');
+  }
+
+  if (args.books.length === 0) {
+    throw createHttpError(400, 'books must include at least one book.');
+  }
+
+  if (args.books.length > 50) {
+    throw createHttpError(400, 'books can include at most 50 books.');
+  }
+
+  const dryRun = normalizeBoolean(args.dryRun, false);
+  const existingBooks = await getReadingListEntries();
+  const duplicateBooksByKey = new Map();
+  const usedSlugs = new Set();
+
+  existingBooks.forEach((book) => {
+    duplicateBooksByKey.set(getReadingListDuplicateKey(book), book);
+    if (book.slug) {
+      usedSlugs.add(String(book.slug));
+    }
+  });
+
+  const skipped = [];
+  const candidates = [];
+
+  args.books.forEach((book, index) => {
+    if (!book || typeof book !== 'object' || Array.isArray(book)) {
+      throw createHttpError(400, `books[${index}] must be an object.`);
+    }
+
+    const title = normalizeRequiredText(book.title, `books[${index}].title`, { maxLength: 200 });
+    const author = normalizeRequiredText(book.author, `books[${index}].author`, { maxLength: 200 });
+    const duplicateKey = getReadingListDuplicateKey({ title, author });
+    const explicitSlug = normalizeOptionalText(book.slug, `books[${index}].slug`, { maxLength: 160 });
+    const normalizedExplicitSlug = explicitSlug ? slugifyReadingListValue(explicitSlug) : '';
+
+    if (duplicateBooksByKey.has(duplicateKey)) {
+      skipped.push({
+        index,
+        reason: 'title_author_match',
+        input: { title, author },
+        existingBook: createReadingListBookReference(duplicateBooksByKey.get(duplicateKey)),
+      });
+      return;
+    }
+
+    if (normalizedExplicitSlug && usedSlugs.has(normalizedExplicitSlug)) {
+      const existingBook = existingBooks.find((candidate) => candidate.slug === normalizedExplicitSlug) || null;
+      skipped.push({
+        index,
+        reason: 'slug_match',
+        input: { title, author, slug: normalizedExplicitSlug },
+        ...(existingBook ? { existingBook: createReadingListBookReference(existingBook) } : {}),
+      });
+      return;
+    }
+
+    const payload = normalizeReadingListBookPayload(book, index, usedSlugs);
+    candidates.push({ index, payload });
+    duplicateBooksByKey.set(getReadingListDuplicateKey(payload), payload);
+    usedSlugs.add(payload.slug);
+  });
+
+  const created = [];
+  const failed = [];
+
+  if (!dryRun) {
+    for (const candidate of candidates) {
+      try {
+        const book = await createReadingListEntry(candidate.payload);
+        created.push({
+          index: candidate.index,
+          book: createReadingListBookReference(book),
+        });
+      } catch (error) {
+        failed.push({
+          index: candidate.index,
+          input: candidate.payload,
+          error: error.message,
+        });
+      }
+    }
+  }
+
+  const wouldCreate = candidates.map((candidate) => ({
+    index: candidate.index,
+    book: createReadingListBookReference(candidate.payload),
+  }));
+
+  const summaryLines = [
+    dryRun ? '# Reading list dry run' : '# Reading list update',
+    '',
+    dryRun
+      ? `Would create ${wouldCreate.length} missing book(s); skipped ${skipped.length}.`
+      : `Created ${created.length} missing book(s); skipped ${skipped.length}; failed ${failed.length}.`,
+  ];
+
+  const visibleCreated = dryRun ? wouldCreate : created;
+
+  if (visibleCreated.length > 0) {
+    summaryLines.push(
+      '',
+      dryRun ? '## Would create' : '## Created',
+      '',
+      ...visibleCreated.map((item) => formatReadingListBookLine(item.book)),
+    );
+  }
+
+  if (skipped.length > 0) {
+    summaryLines.push(
+      '',
+      '## Skipped',
+      '',
+      ...skipped.map((item) => {
+        const inputTitle = item.input?.title || item.existingBook?.title || 'Unknown title';
+        const inputAuthor = item.input?.author || item.existingBook?.author || 'Unknown author';
+        return `- ${inputTitle} — ${inputAuthor}: ${item.reason}`;
+      }),
+    );
+  }
+
+  if (failed.length > 0) {
+    summaryLines.push(
+      '',
+      '## Failed',
+      '',
+      ...failed.map((item) => `- ${item.input.title} — ${item.input.author}: ${item.error}`),
+    );
+  }
+
+  return createToolResult({
+    text: summaryLines.join('\n'),
+    structuredContent: {
+      dryRun,
+      requestedCount: args.books.length,
+      createdCount: created.length,
+      skippedCount: skipped.length,
+      failedCount: failed.length,
+      wouldCreate: dryRun ? wouldCreate : [],
+      created,
+      skipped,
+      failed,
+    },
+  });
+}
+
 async function callTool(name, args = {}, context = {}) {
+  if (name === 'add_missing_reading_list_books') {
+    return addMissingReadingListBooks(args, context);
+  }
+
   const staticContext = await getStaticContext();
 
   if (name === 'get_profile_overview') {
@@ -1041,6 +1444,24 @@ function buildDocsPayload(requestUrl) {
           },
         },
       },
+      privateWrites: {
+        required: true,
+        headers: ['x-admin-key', 'Authorization: Bearer <admin-key>'],
+        toolCalls: [
+          {
+            name: 'add_missing_reading_list_books',
+            arguments: {
+              books: [
+                {
+                  year: new Date().getFullYear(),
+                  title: 'The Art of Learning',
+                  author: 'Josh Waitzkin',
+                },
+              ],
+            },
+          },
+        ],
+      },
     },
     supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS,
     capabilities: {
@@ -1092,6 +1513,23 @@ function buildDocsPayload(requestUrl) {
           name: 'get_bookshelf',
           arguments: {
             includePrivateNotes: true,
+          },
+        },
+      },
+      addMissingReadingListBooks: {
+        jsonrpc: JSON_RPC_VERSION,
+        id: 5,
+        method: 'tools/call',
+        params: {
+          name: 'add_missing_reading_list_books',
+          arguments: {
+            books: [
+              {
+                year: new Date().getFullYear(),
+                title: 'The Art of Learning',
+                author: 'Josh Waitzkin',
+              },
+            ],
           },
         },
       },
