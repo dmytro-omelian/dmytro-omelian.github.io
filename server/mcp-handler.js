@@ -4,6 +4,7 @@ const packageJson = require('../package.json');
 const {
   createReadingListEntry,
   createHttpError,
+  deleteReadingListEntry,
   getAllPostViews,
   getBookshelfEntries,
   getBlogCommentCounts,
@@ -293,6 +294,53 @@ const TOOL_DEFINITIONS = [
           type: 'boolean',
           description: 'Preview which books would be created without writing to the database.',
           default: false,
+        },
+      },
+      required: ['books'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'delete_reading_list_books',
+    title: 'Delete reading-list books',
+    description: 'Delete reading-list entries matched exactly by normalized title+author or by slug. Defaults to a dry run and requires x-admin-key or Authorization: Bearer <key>.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        books: {
+          type: 'array',
+          description: 'Books to delete when an exact match exists.',
+          minItems: 1,
+          maxItems: 50,
+          items: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'Book title in the visible/original language of the edition.',
+                minLength: 1,
+                maxLength: 200,
+              },
+              author: {
+                type: 'string',
+                description: 'Book author in the visible/original language of the edition.',
+                minLength: 1,
+                maxLength: 200,
+              },
+              slug: {
+                type: 'string',
+                description: 'Optional exact URL slug.',
+                maxLength: 160,
+              },
+            },
+            required: ['title', 'author'],
+            additionalProperties: false,
+          },
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview which books would be deleted without writing to the database.',
+          default: true,
         },
       },
       required: ['books'],
@@ -1212,9 +1260,174 @@ async function addMissingReadingListBooks(args = {}, context = {}) {
   });
 }
 
+async function deleteReadingListBooks(args = {}, context = {}) {
+  ensurePrivateMcpAccess(context.headers);
+
+  if (!Array.isArray(args.books)) {
+    throw createHttpError(400, 'books must be an array.');
+  }
+
+  if (args.books.length === 0) {
+    throw createHttpError(400, 'books must include at least one book.');
+  }
+
+  if (args.books.length > 50) {
+    throw createHttpError(400, 'books can include at most 50 books.');
+  }
+
+  const dryRun = normalizeBoolean(args.dryRun, true);
+  const existingBooks = await getReadingListEntries();
+  const duplicateBooksByKey = new Map();
+  const booksBySlug = new Map();
+
+  existingBooks.forEach((book) => {
+    duplicateBooksByKey.set(getReadingListDuplicateKey(book), book);
+    if (book.slug) {
+      booksBySlug.set(String(book.slug), book);
+    }
+  });
+
+  const skipped = [];
+  const candidates = [];
+  const matchedRecordIds = new Set();
+
+  args.books.forEach((book, index) => {
+    if (!book || typeof book !== 'object' || Array.isArray(book)) {
+      throw createHttpError(400, `books[${index}] must be an object.`);
+    }
+
+    const title = normalizeRequiredText(book.title, `books[${index}].title`, { maxLength: 200 });
+    const author = normalizeRequiredText(book.author, `books[${index}].author`, { maxLength: 200 });
+    const explicitSlug = normalizeOptionalText(book.slug, `books[${index}].slug`, { maxLength: 160 });
+    const normalizedExplicitSlug = explicitSlug ? slugifyReadingListValue(explicitSlug) : '';
+    const input = {
+      title,
+      author,
+      ...(normalizedExplicitSlug ? { slug: normalizedExplicitSlug } : {}),
+    };
+    const duplicateKey = getReadingListDuplicateKey(input);
+    const titleAuthorMatch = duplicateBooksByKey.get(duplicateKey) || null;
+    const slugMatch = normalizedExplicitSlug ? booksBySlug.get(normalizedExplicitSlug) || null : null;
+    const matchedBook = titleAuthorMatch || slugMatch;
+
+    if (!matchedBook) {
+      skipped.push({
+        index,
+        reason: 'not_found',
+        input,
+        matchedRecord: null,
+      });
+      return;
+    }
+
+    const matchedRecord = createReadingListBookReference(matchedBook);
+
+    if (matchedRecordIds.has(matchedRecord.id)) {
+      skipped.push({
+        index,
+        reason: 'duplicate_request',
+        input,
+        matchReason: titleAuthorMatch ? 'title_author_match' : 'slug_match',
+        matchedRecord,
+      });
+      return;
+    }
+
+    matchedRecordIds.add(matchedRecord.id);
+    candidates.push({
+      index,
+      input,
+      matchReason: titleAuthorMatch ? 'title_author_match' : 'slug_match',
+      matchedRecord,
+    });
+  });
+
+  const deleted = [];
+  const failed = [];
+
+  if (!dryRun) {
+    for (const candidate of candidates) {
+      try {
+        const wasDeleted = await deleteReadingListEntry(candidate.matchedRecord.id);
+
+        if (wasDeleted) {
+          deleted.push(candidate);
+        } else {
+          skipped.push({
+            ...candidate,
+            reason: 'already_deleted',
+          });
+        }
+      } catch (error) {
+        failed.push({
+          ...candidate,
+          error: error.message,
+        });
+      }
+    }
+  }
+
+  const wouldDelete = dryRun ? candidates : [];
+  const visibleDeleted = dryRun ? wouldDelete : deleted;
+  const summaryLines = [
+    dryRun ? '# Reading list deletion dry run' : '# Reading list deletion',
+    '',
+    dryRun
+      ? `Would delete ${wouldDelete.length} book(s); skipped ${skipped.length}.`
+      : `Deleted ${deleted.length} book(s); skipped ${skipped.length}; failed ${failed.length}.`,
+  ];
+
+  if (visibleDeleted.length > 0) {
+    summaryLines.push(
+      '',
+      dryRun ? '## Would delete' : '## Deleted',
+      '',
+      ...visibleDeleted.map((item) => formatReadingListBookLine(item.matchedRecord)),
+    );
+  }
+
+  if (skipped.length > 0) {
+    summaryLines.push(
+      '',
+      '## Skipped',
+      '',
+      ...skipped.map((item) => `- ${item.input.title} — ${item.input.author}: ${item.reason}`),
+    );
+  }
+
+  if (failed.length > 0) {
+    summaryLines.push(
+      '',
+      '## Failed',
+      '',
+      ...failed.map((item) => `- ${item.input.title} — ${item.input.author}: ${item.error}`),
+    );
+  }
+
+  return createToolResult({
+    text: summaryLines.join('\n'),
+    structuredContent: {
+      dryRun,
+      requestedCount: args.books.length,
+      wouldDeleteCount: wouldDelete.length,
+      deletedCount: deleted.length,
+      skippedCount: skipped.length,
+      failedCount: failed.length,
+      wouldDelete,
+      deleted,
+      skipped,
+      failed,
+    },
+  });
+}
+
 async function callTool(name, args = {}, context = {}) {
   if (name === 'add_missing_reading_list_books') {
     return addMissingReadingListBooks(args, context);
+  }
+
+  if (name === 'delete_reading_list_books') {
+    return deleteReadingListBooks(args, context);
   }
 
   const staticContext = await getStaticContext();
@@ -1460,6 +1673,18 @@ function buildDocsPayload(requestUrl) {
               ],
             },
           },
+          {
+            name: 'delete_reading_list_books',
+            arguments: {
+              books: [
+                {
+                  title: 'The Art of Learning',
+                  author: 'Josh Waitzkin',
+                },
+              ],
+              dryRun: true,
+            },
+          },
         ],
       },
     },
@@ -1530,6 +1755,23 @@ function buildDocsPayload(requestUrl) {
                 author: 'Josh Waitzkin',
               },
             ],
+          },
+        },
+      },
+      deleteReadingListBooks: {
+        jsonrpc: JSON_RPC_VERSION,
+        id: 6,
+        method: 'tools/call',
+        params: {
+          name: 'delete_reading_list_books',
+          arguments: {
+            books: [
+              {
+                title: 'The Art of Learning',
+                author: 'Josh Waitzkin',
+              },
+            ],
+            dryRun: true,
           },
         },
       },
