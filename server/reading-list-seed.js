@@ -49,6 +49,24 @@ function assignSeedSlugs(entries) {
 const legacyReadingListEntries = assignSeedSlugs([
   ...createSeedEntries(2026, [
     {
+      title: "An Astronaut's Guide to Life on Earth",
+      author: 'Chris Hadfield',
+      finishedOn: '2026-07-19',
+      score: 5,
+    },
+    {
+      title: 'Найбагатша людина у Вавилоні',
+      author: 'Джордж Клейсон',
+      finishedOn: '2026-07-15',
+      score: 4,
+    },
+    {
+      title: '21 лист про життя і його виклики',
+      author: 'Чарльз Генді',
+      finishedOn: '2026-07-15',
+      score: 4,
+    },
+    {
       title: 'Writing About Your Life',
       author: 'William Zinsser',
       finishedOn: '2026-04-04',
