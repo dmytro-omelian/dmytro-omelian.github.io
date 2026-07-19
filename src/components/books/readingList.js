@@ -22,6 +22,7 @@ export function slugifyReadingListValue(input) {
 export function sortReadingListEntries(entries = []) {
   return [...entries].sort((leftBook, rightBook) => (
     normalizeBookYear(rightBook.year) - normalizeBookYear(leftBook.year)
+    || String(getBookFinishedOn(rightBook) || '').localeCompare(String(getBookFinishedOn(leftBook) || ''))
     || normalizeBookSortOrder(rightBook.sortOrder) - normalizeBookSortOrder(leftBook.sortOrder)
     || String(leftBook.title || '').localeCompare(String(rightBook.title || ''))
     || Number(leftBook.id || 0) - Number(rightBook.id || 0)

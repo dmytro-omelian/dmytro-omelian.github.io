@@ -67,6 +67,12 @@ const legacyReadingListEntries = assignSeedSlugs([
       score: 4,
     },
     {
+      title: 'Снігова куля. Воррен Баффет і справа життя',
+      author: 'Еліс Шредер',
+      finishedOn: '2026-07-11',
+      score: 4,
+    },
+    {
       title: 'Writing About Your Life',
       author: 'William Zinsser',
       finishedOn: '2026-04-04',

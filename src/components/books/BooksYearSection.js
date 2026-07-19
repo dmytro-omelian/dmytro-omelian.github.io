@@ -210,6 +210,7 @@ function BookNoteModal({ book, onClose }) {
 
 function BooksYearSection({ year, books }) {
     const [selectedBook, setSelectedBook] = React.useState(null);
+    const bookCount = books.length;
 
     const handleOpenSummary = (book) => {
         if (!hasBookSummary(book)) return;
@@ -253,7 +254,13 @@ function BooksYearSection({ year, books }) {
     return (
         <div>
             <div className="books-by-year">
-                <h3>{year}</h3>
+                <h3>
+                    {year}
+                    <span className="books-year-count">
+                        {' · '}
+                        {bookCount} {bookCount === 1 ? 'book' : 'books'}
+                    </span>
+                </h3>
                 <ul>
                     {books
                         .map((book, index) => {

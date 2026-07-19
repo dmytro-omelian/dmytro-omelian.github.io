@@ -9,6 +9,19 @@ describe('BooksYearSection', () => {
     window.history.replaceState(null, '', '/books');
   });
 
+  test('shows the number of books next to the year', () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <BooksYearSection
+          year="2026"
+          books={[{ id: 1, title: 'Only Book', author: 'Author' }]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('2026 · 1 book');
+  });
+
   test('opens a summary from the hash and clears the hash when closing', async () => {
     window.history.replaceState(null, '', '/books#book-hash-book');
 

@@ -11,15 +11,16 @@ jest.mock('../../api/siteData', () => ({
 describe('Books', () => {
   test('loads API books, sorts them, and groups them by year', async () => {
     getPublicReadingList.mockResolvedValue([
-      { id: 4, year: 2025, title: 'Later book', author: 'Author 2', sortOrder: 2 },
-      { id: 2, year: 2026, title: 'Second', author: 'Author 4', sortOrder: 1 },
-      { id: 3, year: 2025, title: 'Earlier book', author: 'Author 1', sortOrder: 0 },
+      { id: 4, year: 2025, title: 'Later book', author: 'Author 2', sortOrder: 2, finishedOn: '2025-02-01' },
+      { id: 2, year: 2026, title: 'Second', author: 'Author 4', sortOrder: 1, finishedOn: '2026-01-01' },
+      { id: 3, year: 2025, title: 'Earlier book', author: 'Author 1', sortOrder: 0, finishedOn: '2025-03-01' },
       {
         id: 1,
         year: 2026,
         title: 'First',
         author: 'Author 3',
         sortOrder: 0,
+        finishedOn: '2026-02-01',
         relatedPostSlug: 'first-post',
       },
     ]);
@@ -35,16 +36,16 @@ describe('Books', () => {
     await waitFor(() => expect(getPublicReadingList).toHaveBeenCalledTimes(1));
 
     const headings = (await screen.findAllByRole('heading', { level: 3 })).map((heading) => heading.textContent);
-    expect(headings).toEqual(['2026', '2025']);
+    expect(headings).toEqual(['2026 · 2 books', '2025 · 2 books']);
 
     const yearSections = container.querySelectorAll('.books-by-year');
     expect(within(yearSections[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Second by Author 4',
       'First by Author 3',
+      'Second by Author 4',
     ]);
     expect(within(yearSections[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Later book by Author 2',
       'Earlier book by Author 1',
+      'Later book by Author 2',
     ]);
   });
 
