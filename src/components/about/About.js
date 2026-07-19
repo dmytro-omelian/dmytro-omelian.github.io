@@ -12,7 +12,7 @@ function About() {
                 <div className="about-left-stack">
                     <div className="about-copy-column">
                         <p className="about-intro">
-                            I&apos;m a Ukrainian early engineer and product-minded builder living in Warsaw, spending most of my time at the intersection of startup execution, writing in public, and small software experiments.
+                            I&apos;m Ukrainian, an early engineer at AiSDR (a YC-backed startup), living in Warsaw.
                         </p>
                         <div className="about-socials">
                             <a

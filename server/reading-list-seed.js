@@ -49,7 +49,7 @@ function assignSeedSlugs(entries) {
 const legacyReadingListEntries = assignSeedSlugs([
   ...createSeedEntries(2026, [
     {
-      title: "An Astronaut's Guide to Life on Earth",
+      title: "🔥 An Astronaut's Guide to Life on Earth",
       author: 'Chris Hadfield',
       finishedOn: '2026-07-19',
       score: 5,

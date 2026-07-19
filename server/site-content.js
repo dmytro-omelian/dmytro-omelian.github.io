@@ -286,7 +286,7 @@ function getAboutProfile() {
     role: 'Early engineer at AiSDR',
     location: 'Warsaw, Poland',
     nationality: 'Ukrainian',
-    summary: 'Ukrainian early engineer and product-minded builder living in Warsaw, spending most of his time at the intersection of startup execution, writing in public, and small software experiments.',
+    summary: 'Ukrainian, an early engineer at AiSDR (a YC-backed startup), living in Warsaw.',
     focusAreas: [
       'startup execution',
       'writing in public',
