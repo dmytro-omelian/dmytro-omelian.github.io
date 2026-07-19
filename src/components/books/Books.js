@@ -63,7 +63,7 @@ function Books() {
         <>
           <hr className="books-divider" />
           <p className="books-bookshelf-link">
-            <Link to="/bookshelf" className="books-bookshelf-anchor">My Bookshelf</Link>
+            <Link to="/bookshelf" className="books-bookshelf-anchor">My bookshelf</Link>
           </p>
         </>
       )}

@@ -73,7 +73,7 @@ function Bookshelf() {
 
   return (
     <div className="bookshelf-container">
-      <h2 className="bookshelf-container-title">My Bookshelf</h2>
+      <h2 className="bookshelf-container-title">My bookshelf</h2>
 
       {!isLoading && !error && entries.length > 0 && (
         <div className="bookshelf-search">
