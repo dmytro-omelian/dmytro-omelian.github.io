@@ -12,7 +12,7 @@ function About() {
                 <div className="about-left-stack">
                     <div className="about-copy-column">
                         <p className="about-intro">
-                            I&apos;m Ukrainian, an early engineer at AiSDR (a YC-backed startup), living in Warsaw.
+                            I&apos;m Ukrainian, a software engineer at AiSDR (a YC-backed startup), living in Warsaw.
                         </p>
                         <div className="about-socials">
                             <a
@@ -52,7 +52,7 @@ function About() {
                 <div className="about-profile-card">
                     <img className='me-image' src="me.png" alt="Profile" />
                     <p className="about-profile-meta">Warsaw, Poland</p>
-                    <p className="about-profile-meta about-profile-meta-muted">Early engineer at AiSDR</p>
+                    <p className="about-profile-meta about-profile-meta-muted">Software Engineer</p>
                 </div>
             </section>
 

@@ -283,10 +283,10 @@ async function getActivities() {
 function getAboutProfile() {
   return {
     name: 'Dmytro Omelian',
-    role: 'Early engineer at AiSDR',
+    role: 'Software Engineer',
     location: 'Warsaw, Poland',
     nationality: 'Ukrainian',
-    summary: 'Ukrainian, an early engineer at AiSDR (a YC-backed startup), living in Warsaw.',
+    summary: 'Ukrainian, a software engineer at AiSDR (a YC-backed startup), living in Warsaw.',
     focusAreas: [
       'startup execution',
       'writing in public',
