@@ -4,9 +4,18 @@ import './Experience.css';
 function Experience() {
     const experiences = [
         {
+            title: "Founder",
+            company: "SaveNest",
+            city: "San Francisco, USA",
+            dates: "Oct 2026 - Present",
+            descriptions: [
+                "Building a private, searchable home for pages people do not want to lose",
+            ]
+        },
+        {
             title: "Software Engineer",
             company: "AiSDR",
-            dates: "Nov 2023 - Present",
+            dates: "Nov 2023 - Sep 2026",
             descriptions: [
                 "Building the leading AI sales platform at a YC-backed startup (S23 batch, raised $3M at $20M valuation)",
             ]

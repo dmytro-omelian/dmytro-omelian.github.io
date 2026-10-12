@@ -7,7 +7,7 @@ function Header() {
         <header className="site-header">
             <div className="site-header-inner">
                 <Link to="/" className="site-name">
-                    Dmytro Omelian
+                    Dima Omelian
                 </Link>
                 <nav aria-label="Main navigation">
                     <NavLink to="/experience">Experience</NavLink>

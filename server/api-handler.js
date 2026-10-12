@@ -228,7 +228,7 @@ async function buildAgentOverviewMarkdown(requestUrl) {
   const recentPosts = staticContent.blogPosts.slice(0, 5);
 
   return [
-    '# Dmytro Omelian',
+    '# Dima Omelian',
     '',
     'Personal website data for humans and AI agents.',
     '',
@@ -272,7 +272,7 @@ async function buildLlmsText(requestUrl) {
     '# llms.txt',
     '',
     `site: ${requestUrl.origin}`,
-    'name: Dmytro Omelian',
+    'name: Dima Omelian',
     'description: Personal website with public profile, writing, and blog.',
     '',
     'endpoints:',

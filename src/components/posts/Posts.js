@@ -6,48 +6,66 @@ import PostComments, { DiscussionIcon, formatDiscussionLabel } from './PostComme
 import NewsletterSignup from '../forms/NewsletterSignup';
 import './Posts.css';
 
-const posts = [
+export const posts = [
+    {
+        id: 15,
+        slug: "my-first-time-in-stockholm-thanks",
+        title: "My first time in Stockholm (thanks, YC!)",
+        author: "Dima Omelian",
+        date: "September 27, 2026",
+        preview: "Sometimes it takes almost five months to write about a two-day trip.",
+        externalUrl: "https://domelian.substack.com/p/my-first-time-in-stockholm-thanks",
+    },
+    {
+        id: 14,
+        slug: "think-real-hard",
+        title: "Think real hard",
+        author: "Dima Omelian",
+        date: "September 19, 2026",
+        preview: "Why do I feel guilty about thinking?",
+        externalUrl: "https://domelian.substack.com/p/think-real-hard",
+    },
+    {
+        id: 13,
+        slug: "1000-days-at-yc-company",
+        title: "1000 days at YC company",
+        author: "Dima Omelian",
+        date: "August 10, 2026",
+        preview: "What it feels like to join a small team.",
+        externalUrl: "https://domelian.substack.com/p/1000-days-at-yc-company",
+    },
+    {
+        id: 12,
+        slug: "how-to-start-writing-online",
+        title: "How to start writing online",
+        author: "Dima Omelian",
+        date: "July 24, 2026",
+        preview: "35 things I wish I knew before publishing my first post.",
+        externalUrl: "https://domelian.substack.com/p/how-to-start-writing-online",
+    },
     {
         id: 11,
         slug: "what-i-learned-from-warren-buffett",
         title: "What I learned from Warren Buffett and Charlie Munger",
-        author: "Dmytro Omelian",
+        author: "Dima Omelian",
         date: "June 8, 2026",
         preview: "Not investing advice - five ideas about how to think, how to work, and how to spend a life.",
         externalUrl: "https://domelian.substack.com/p/what-i-learned-from-warren-buffett",
-        image: {
-            src: "https://substack-post-media.s3.amazonaws.com/public/images/d88d950e-9577-499e-ad9b-5fd60e88e0ed_2048x1638.jpeg",
-            alt: "Warren Buffett and Charlie Munger",
-        },
-        externalStats: {
-            likes: 25,
-            views: "3.69k",
-            comments: 0,
-        },
     },
     {
         id: 10,
         slug: "read-this-before-your-next-long-project",
         title: "Read this before your next long project",
-        author: "Dmytro Omelian",
+        author: "Dima Omelian",
         date: "May 18, 2026",
         preview: "Notes from reading Jordan Mechner's Making of Prince of Persia.",
         externalUrl: "https://domelian.substack.com/p/read-this-before-your-next-long-project",
-        image: {
-            src: "https://substack-post-media.s3.amazonaws.com/public/images/e9870752-c484-4aed-87b5-89eaf041f40d_686x386.jpeg",
-            alt: "Prince of Persia title screen",
-        },
-        externalStats: {
-            likes: 236,
-            views: "11k",
-            comments: 32,
-        },
     },
     {
         id: 9,
         slug: "dopamine",
         title: "dopamine",
-        author: "Dmytro Omelian",
+        author: "Dima Omelian",
         date: "April 17, 2026",
         preview: "i was 17 when i first noticed it. six years into the fight with screens, dopamine, and a brain that always finds the workaround.",
         content: [
@@ -77,7 +95,7 @@ const posts = [
         id: 8,
         slug: "1984-book-note",
         title: "1984 — нотатка після прочитання",
-        author: "Dmytro Omelian",
+        author: "Dima Omelian",
         date: "April 4, 2026",
         preview: "Мій перший роман-антиутопія і книга, яка змусила по-іншому дивитись на мову, правду і контроль.",
         content: [
@@ -221,7 +239,7 @@ const posts = [
         id: 6,
         slug: "how-donald-knuths-ai-experiment-changed-my-approach-to-testing-ideas",
         title: "How Donald Knuth's AI Experiment Changed My Approach to Testing Ideas",
-        author: "Dmytro Omelian",
+        author: "Dima Omelian",
         date: "March 21, 2026",
         preview: "Donald Knuth just changed how I think about validating ideas.",
         content: [
@@ -263,7 +281,7 @@ const posts = [
         id: 5,
         slug: "now-i-see-how-it-is-coming",
         title: "Now I See How It Is Coming",
-        author: "Dmytro Omelian",
+        author: "Dima Omelian",
         date: "March 9, 2026",
         preview: "You're paying $9.99 a month for an app that does three things you care about and forty-seven you don't.",
         content: [
@@ -416,7 +434,7 @@ const posts = [
     }
 ];
 
-const DEFAULT_AUTHOR = 'Dmytro Omelian';
+const DEFAULT_AUTHOR = 'Dima Omelian';
 const viewCountFormatter = new Intl.NumberFormat('en-US');
 
 function getPostAuthor(post) {
@@ -427,59 +445,6 @@ function formatViewLabel(viewCount) {
     const safeViewCount = Number.isFinite(viewCount) && viewCount >= 0 ? Math.floor(viewCount) : 0;
     const suffix = safeViewCount === 1 ? 'view' : 'views';
     return `${viewCountFormatter.format(safeViewCount)} ${suffix}`;
-}
-
-function formatLikeLabel(likeCount) {
-    const safeLikeCount = Number.isFinite(likeCount) && likeCount >= 0 ? Math.floor(likeCount) : 0;
-    const suffix = safeLikeCount === 1 ? 'like' : 'likes';
-    return `${viewCountFormatter.format(safeLikeCount)} ${suffix}`;
-}
-
-function formatExternalViewLabel(viewCount) {
-    if (typeof viewCount === 'string' && viewCount.trim()) {
-        return `${viewCount.trim()} views`;
-    }
-
-    return formatViewLabel(viewCount);
-}
-
-function HeartIcon({ className = '' }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            <path d="M19.5 13.5 12 21l-7.5-7.5A5.1 5.1 0 0 1 12 6.6a5.1 5.1 0 0 1 7.5 6.9Z" />
-        </svg>
-    );
-}
-
-function EyeIcon({ className = '' }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-        >
-            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-            <circle cx="12" cy="12" r="3" />
-        </svg>
-    );
 }
 
 function PostMeta({ date, viewCount, commentCount, discussionHref, selected = false }) {
@@ -512,35 +477,6 @@ function PostMeta({ date, viewCount, commentCount, discussionHref, selected = fa
     );
 }
 
-function ExternalPostStats({ stats }) {
-    if (!stats) {
-        return null;
-    }
-
-    return (
-        <div className="external-post-stats" aria-label="Substack stats">
-            {stats.views && (
-                <span className="external-post-stat">
-                    <EyeIcon className="post-stat-icon" />
-                    <span>{formatExternalViewLabel(stats.views)}</span>
-                </span>
-            )}
-            {typeof stats.likes === 'number' && (
-                <span className="external-post-stat">
-                    <HeartIcon className="post-stat-icon" />
-                    <span>{formatLikeLabel(stats.likes)}</span>
-                </span>
-            )}
-            {typeof stats.comments === 'number' && (
-                <span className="external-post-stat">
-                    <DiscussionIcon className="post-stat-icon" />
-                    <span>{formatDiscussionLabel(stats.comments)}</span>
-                </span>
-            )}
-        </div>
-    );
-}
-
 function PostListItem({ post, viewsBySlug, commentCountsBySlug }) {
     const isExternalPost = Boolean(post.externalUrl);
     const className = `post-item${post.image ? ' post-item-with-image' : ''}${isExternalPost ? ' post-item-external' : ''}`;
@@ -560,10 +496,7 @@ function PostListItem({ post, viewsBySlug, commentCountsBySlug }) {
                             <span className="post-meta-separator" aria-hidden="true">•</span>
                             <span>Substack</span>
                         </div>
-                        <div className="external-post-reveal">
-                            <ExternalPostStats stats={post.externalStats} />
-                            <p className="post-preview external-post-hover-preview">{post.preview}</p>
-                        </div>
+                        <p className="post-preview">{post.preview}</p>
                     </>
                 ) : (
                     <>
@@ -730,12 +663,16 @@ function Posts() {
 
     return (
         <div className='posts-container'>
-            <h1>Blog</h1>
+            <h1>Writing</h1>
 
             <div className="items-list">
                 {posts
                     .slice()
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .filter((post, index, items) => {
+                        const key = post.externalUrl || post.slug;
+                        return items.findIndex((item) => (item.externalUrl || item.slug) === key) === index;
+                    })
                     .map(post => (
                         <PostListItem
                             key={post.id}

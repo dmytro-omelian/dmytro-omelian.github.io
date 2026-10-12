@@ -7,7 +7,7 @@ function Footer() {
     return (
         <footer className="site-footer">
             <div className="site-footer-inner">
-                <span>&copy; {year} Dmytro Omelian</span>
+                <span>&copy; {year} Dima Omelian</span>
                 <a href="mailto:dm.omelian@gmail.com">dm.omelian@gmail.com</a>
             </div>
         </footer>

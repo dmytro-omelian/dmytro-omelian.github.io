@@ -4,7 +4,7 @@
 }
 
 .site-footer-inner {
-  width: min(1120px, calc(100% - 48px));
+  width: min(680px, calc(100% - 48px));
   margin: 0 auto;
   padding-top: 22px;
   border-top: 1px solid var(--line);
@@ -26,7 +26,7 @@
 
 @media (max-width: 640px) {
   .site-footer-inner {
-    width: min(100% - 32px, 1120px);
+    width: min(100% - 32px, 680px);
     flex-direction: column;
     gap: 8px;
   }

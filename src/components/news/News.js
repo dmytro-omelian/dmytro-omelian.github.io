@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import './News.css';
 
 const newsItems = [
+    { date: "Oct 2026", description: "Started my startup journey and moved to San Francisco" },
+    { date: "Sep 2026", description: "Left AiSDR after 3 years" },
     { date: "Jan 2026", description: "Moved to Warsaw, Poland" },
     { date: "Jan 2026", description: "Started working on x-ai-agent pet-project and doing some social engineering there :)" },
     { date: "Oct 2025", description: "1 year of daily writing on LinkedIn with 400,000 impressions and 3,100 followers" },
@@ -15,7 +17,7 @@ const newsItems = [
     { date: "Feb 2025", description: "1 year at ", links: [{ text: "Center of Entrepreneurship", url: "https://ideascenter.ucu.edu.ua/" }] },
     { date: "Nov 2024", description: "1 year at ", links: [{ text: "AiSDR", url: "https://aisdr.com" }] },
     { date: "Nov 2024", description: "Had 2 batches involved part-time and now going to help and mentor students, lecturing about problem analysis, customer development, and pitching. Involvement includes helping build IdeasLab" },
-    { date: "Oct 2024", description: "Started daily writing on LinkedIn", link: { text: "Dmytro Omelian", url: "https://www.linkedin.com/in/dmytro-omelian/" } },
+    { date: "Oct 2024", description: "Started daily writing on LinkedIn", link: { text: "Dima Omelian", url: "https://www.linkedin.com/in/dmytro-omelian/" } },
     { date: "Feb 2024", description: "Started working in ", links: [{ text: "Center for Entrepreneurship", url: "https://ideascenter.ucu.edu.ua/" }], suffix: " as Project manager working on IdeasLab program" },
     { date: "Jan 2024", description: "Finished Football Analytics Course as teaching assistant (UCU)." },
     { date: "Jan 2024", description: "Finished my research @ Anhalt University" },

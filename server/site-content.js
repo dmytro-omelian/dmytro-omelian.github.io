@@ -10,7 +10,7 @@ const SOURCE_FILES = {
   achievements: path.join(ROOT_DIRECTORY, 'src', 'components', 'achievements', 'Achievements.js'),
   activities: path.join(ROOT_DIRECTORY, 'src', 'components', 'others', 'Others.js'),
 };
-const DEFAULT_AUTHOR = 'Dmytro Omelian';
+const DEFAULT_AUTHOR = 'Dima Omelian';
 const monthMap = {
   Jan: 0,
   January: 0,
@@ -282,16 +282,16 @@ async function getActivities() {
 
 function getAboutProfile() {
   return {
-    name: 'Dmytro Omelian',
-    role: 'Software Engineer',
-    location: 'Warsaw, Poland',
+    name: 'Dima Omelian',
+    role: 'Founder',
+    location: 'San Francisco, USA',
     nationality: 'Ukrainian',
-    summary: 'Ukrainian, a software engineer at AiSDR (a YC-backed startup), living in Warsaw.',
+    summary: 'Ukrainian founder in San Francisco, building SaveNest and writing Learned Anyway.',
     focusAreas: [
-      'startup execution',
+      'startup building',
       'writing in public',
       'small software experiments',
-      'product-minded engineering',
+      'product engineering',
     ],
     socials: [
       {
@@ -349,7 +349,7 @@ function renderAboutMarkdown(about) {
   const socials = about.socials.map((item) => `- [${item.label}](${item.url})`).join('\n');
 
   return [
-    '# About Dmytro Omelian',
+    '# About Dima Omelian',
     '',
     `- Name: ${about.name}`,
     `- Role: ${about.role}`,
