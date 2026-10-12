@@ -14,6 +14,14 @@ const projects = [
         description: 'A private, searchable home for pages you don\'t want to lose.',
     },
     {
+        name: 'x-ai-agent',
+        url: 'mailto:dima@omelabs.org?subject=x-ai-agent&body=Hi%20Dima%2C%0A%0AI%27m%20interested%20in%20x-ai-agent.',
+        type: 'growth agent',
+        year: '2026',
+        status: 'active',
+        description: 'Started Jan 10 · X replies as ads · 1.5k–3k replies per $50.',
+    },
+    {
         name: 'Learned Anyway',
         url: 'https://domelian.substack.com/',
         type: 'newsletter',
@@ -64,6 +72,7 @@ const recentPosts = posts
     .slice(0, 4);
 
 function ProjectItem({ project, writingDayCount }) {
+    const isWebLink = project.url?.startsWith('http');
     const content = (
         <>
             <span className="about-list-line">
@@ -86,7 +95,12 @@ function ProjectItem({ project, writingDayCount }) {
     }
 
     return (
-        <a className="about-list-item" href={project.url} target="_blank" rel="noreferrer">
+        <a
+            className="about-list-item"
+            href={project.url}
+            target={isWebLink ? '_blank' : undefined}
+            rel={isWebLink ? 'noreferrer' : undefined}
+        >
             {content}
         </a>
     );
