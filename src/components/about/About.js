@@ -42,7 +42,7 @@ const projects = [
         url: 'https://ai-calendar.com',
         type: 'web app',
         year: '2025',
-        status: 'finished',
+        status: 'closed',
         description: 'Reached 100 users and made the first $60.',
     },
     {
@@ -73,7 +73,8 @@ const recentPosts = posts
 
 function ProjectItem({ project, writingDayCount }) {
     const isWebLink = project.url?.startsWith('http');
-    const itemClassName = `about-list-item${project.status === 'finished' ? ' about-list-item-finished' : ''}`;
+    const isInactive = project.status !== 'active';
+    const itemClassName = `about-list-item${isInactive ? ' about-list-item-inactive' : ''}`;
     const content = (
         <>
             <span className="about-list-line">
@@ -82,7 +83,7 @@ function ProjectItem({ project, writingDayCount }) {
                 <span className="about-list-meta">{project.type}</span>
                 <span className="about-list-year">{project.year}</span>
                 <span className={`about-list-status about-list-status-${project.status}`}>
-                    {project.status === 'finished' ? '✓ finished' : project.status}
+                    {isInactive ? `✓ ${project.status}` : project.status}
                 </span>
             </span>
             <span className="about-list-description">

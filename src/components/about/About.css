@@ -146,12 +146,12 @@
   color: var(--ink);
 }
 
-.about-list-item-finished .about-list-title,
-.about-list-item-finished .about-list-description {
+.about-list-item-inactive .about-list-title,
+.about-list-item-inactive .about-list-description {
   color: var(--muted);
 }
 
-.about-list-item-static.about-list-item-finished:hover .about-list-title {
+.about-list-item-static.about-list-item-inactive:hover .about-list-title {
   color: var(--muted);
 }
 
@@ -188,7 +188,8 @@
   color: #4b8d5a;
 }
 
-.about-list-status-finished {
+.about-list-status-finished,
+.about-list-status-closed {
   color: #9c604b;
   font-weight: 500;
 }
