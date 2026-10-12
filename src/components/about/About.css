@@ -146,6 +146,15 @@
   color: var(--ink);
 }
 
+.about-list-item-finished .about-list-title,
+.about-list-item-finished .about-list-description {
+  color: var(--muted);
+}
+
+.about-list-item-static.about-list-item-finished:hover .about-list-title {
+  color: var(--muted);
+}
+
 .about-list-title {
   min-width: 0;
   font-size: 14px;
@@ -180,7 +189,8 @@
 }
 
 .about-list-status-finished {
-  color: var(--muted);
+  color: #9c604b;
+  font-weight: 500;
 }
 
 .about-list-description {

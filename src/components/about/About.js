@@ -19,7 +19,7 @@ const projects = [
         type: 'growth agent',
         year: '2026',
         status: 'active',
-        description: 'Started Jan 10 · X replies as ads · 1.5k–3k replies per $50.',
+        description: 'X replies as ads · 1.5M+ views · 1.5k–3k replies per $50.',
     },
     {
         name: 'Learned Anyway',
@@ -73,6 +73,7 @@ const recentPosts = posts
 
 function ProjectItem({ project, writingDayCount }) {
     const isWebLink = project.url?.startsWith('http');
+    const itemClassName = `about-list-item${project.status === 'finished' ? ' about-list-item-finished' : ''}`;
     const content = (
         <>
             <span className="about-list-line">
@@ -80,7 +81,9 @@ function ProjectItem({ project, writingDayCount }) {
                 <span className="about-list-dots" aria-hidden="true" />
                 <span className="about-list-meta">{project.type}</span>
                 <span className="about-list-year">{project.year}</span>
-                <span className={`about-list-status about-list-status-${project.status}`}>{project.status}</span>
+                <span className={`about-list-status about-list-status-${project.status}`}>
+                    {project.status === 'finished' ? '✓ finished' : project.status}
+                </span>
             </span>
             <span className="about-list-description">
                 {project.isDailyWriting
@@ -91,12 +94,12 @@ function ProjectItem({ project, writingDayCount }) {
     );
 
     if (!project.url) {
-        return <div className="about-list-item about-list-item-static">{content}</div>;
+        return <div className={`${itemClassName} about-list-item-static`}>{content}</div>;
     }
 
     return (
         <a
-            className="about-list-item"
+            className={itemClassName}
             href={project.url}
             target={isWebLink ? '_blank' : undefined}
             rel={isWebLink ? 'noreferrer' : undefined}
