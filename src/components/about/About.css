@@ -138,6 +138,14 @@
   color: var(--accent);
 }
 
+.about-list-item-static {
+  cursor: default;
+}
+
+.about-list-item-static:hover .about-list-title {
+  color: var(--ink);
+}
+
 .about-list-title {
   min-width: 0;
   font-size: 14px;
@@ -163,9 +171,16 @@
 }
 
 .about-list-status {
-  color: #4b8d5a;
   font-size: 11px;
   white-space: nowrap;
+}
+
+.about-list-status-active {
+  color: #4b8d5a;
+}
+
+.about-list-status-finished {
+  color: var(--muted);
 }
 
 .about-list-description {

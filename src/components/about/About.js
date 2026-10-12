@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './About.css';
 import News from '../news/News';
@@ -6,7 +6,7 @@ import { posts } from '../posts/Posts';
 
 const projects = [
     {
-        name: 'SaveNest',
+        name: 'savenest',
         url: 'https://savenest.app',
         type: 'macOS app',
         year: '2026',
@@ -21,7 +21,39 @@ const projects = [
         status: 'active',
         description: 'Author · 700+ subscribers · ~24k views.',
     },
+    {
+        name: 'writing online every day',
+        url: 'https://www.linkedin.com/in/dmytro-omelian/',
+        type: 'writing',
+        year: '2024',
+        status: 'active',
+        isDailyWriting: true,
+    },
+    {
+        name: 'ai-calendar',
+        url: 'https://ai-calendar.com',
+        type: 'web app',
+        year: '2025',
+        status: 'finished',
+        description: 'Reached 100 users and made the first $60.',
+    },
+    {
+        name: 'Hearify',
+        type: 'startup',
+        year: '2023',
+        status: 'finished',
+        description: 'Won AI HOUSE Camp and Student Startup Battle · raised a $5k grant.',
+    },
 ];
+
+const WRITING_START_DATE = Date.UTC(2024, 9, 29);
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+const getWritingDayCount = () => {
+    const today = new Date();
+    const todayDate = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.max(1, Math.floor((todayDate - WRITING_START_DATE) / ONE_DAY) + 1);
+};
 
 const recentPosts = posts
     .filter((post) => post.externalUrl)
@@ -31,7 +63,46 @@ const recentPosts = posts
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 4);
 
+function ProjectItem({ project, writingDayCount }) {
+    const content = (
+        <>
+            <span className="about-list-line">
+                <span className="about-list-title">{project.name}</span>
+                <span className="about-list-dots" aria-hidden="true" />
+                <span className="about-list-meta">{project.type}</span>
+                <span className="about-list-year">{project.year}</span>
+                <span className={`about-list-status about-list-status-${project.status}`}>{project.status}</span>
+            </span>
+            <span className="about-list-description">
+                {project.isDailyWriting
+                    ? `${writingDayCount} days and counting · started October 29, 2024.`
+                    : project.description}
+            </span>
+        </>
+    );
+
+    if (!project.url) {
+        return <div className="about-list-item about-list-item-static">{content}</div>;
+    }
+
+    return (
+        <a className="about-list-item" href={project.url} target="_blank" rel="noreferrer">
+            {content}
+        </a>
+    );
+}
+
 function About() {
+    const [writingDayCount, setWritingDayCount] = useState(getWritingDayCount);
+
+    useEffect(() => {
+        const counterTimer = window.setInterval(() => {
+            setWritingDayCount(getWritingDayCount());
+        }, 60 * 1000);
+
+        return () => window.clearInterval(counterTimer);
+    }, []);
+
     return (
         <div className='about-me-container'>
             <section className="about-hero">
@@ -57,16 +128,11 @@ function About() {
                 <section className="about-section" id="projects">
                     <div className="about-list">
                         {projects.map((project) => (
-                            <a className="about-list-item" href={project.url} target="_blank" rel="noreferrer" key={project.name}>
-                                <span className="about-list-line">
-                                    <span className="about-list-title">{project.name}</span>
-                                    <span className="about-list-dots" aria-hidden="true" />
-                                    <span className="about-list-meta">{project.type}</span>
-                                    <span className="about-list-year">{project.year}</span>
-                                    <span className="about-list-status">{project.status}</span>
-                                </span>
-                                <span className="about-list-description">{project.description}</span>
-                            </a>
+                            <ProjectItem
+                                project={project}
+                                writingDayCount={writingDayCount}
+                                key={project.name}
+                            />
                         ))}
                     </div>
                 </section>
