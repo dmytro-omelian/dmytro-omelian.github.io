@@ -190,13 +190,13 @@ function Experience() {
                     <p>{exp.dates}</p>
                     <ul className='descriptions-box'>
                         {exp.descriptions.map((point, index) => (
-                            <li id={index}>{point}</li>
+                            <li key={index}>{point}</li>
                         ))}
                     </ul>
                     {exp.tags && (
                         <ul className='tags-box'>
                             {exp.tags.map((tag, index) => (
-                                <li id={index}>{tag}</li>
+                                <li key={index}>{tag}</li>
                             ))}
                         </ul>
                     )}
@@ -210,7 +210,7 @@ function Experience() {
                     <p>{exp.dates}</p>
                     <ul className='descriptions-box'>
                         {exp.descriptions.map((point, index) => (
-                            <li id={index}>{point}</li>
+                            <li key={index}>{point}</li>
                         ))}
                     </ul>
                 </div>

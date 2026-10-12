@@ -1,162 +1,138 @@
 .about-me-container {
-  flex: 1;
-  width: 100%;
-  max-width: 980px;
+  width: min(1120px, calc(100% - 48px));
   margin: 0 auto;
-  display: grid;
-  gap: 40px;
 }
 
 .about-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 280px);
-  gap: 40px;
-  align-items: start;
+  min-height: 620px;
+  padding: 110px 0 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.about-left-stack {
-  display: grid;
-  gap: 40px;
-  align-content: start;
-}
-
-.about-copy-column,
-.about-profile-card,
-.about-side-card,
-.newsletter-section {
-  border-radius: 0;
-  border: 0;
-  box-shadow: none;
+.about-kicker,
+.section-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .about-copy-column {
-  padding: 0;
-  background: transparent;
+  max-width: 950px;
 }
 
 .about-copy-column h1 {
   margin: 0;
-  font-size: clamp(32px, 5vw, 44px);
-  line-height: 1.06;
-  color: #111111;
-  font-weight: 400;
+  font-size: clamp(64px, 10vw, 136px);
+  line-height: 0.88;
+  letter-spacing: -0.07em;
+  color: var(--ink);
+  font-weight: 580;
 }
 
 .about-intro {
-  margin: 16px 0 0;
-  font-size: 17px;
-  line-height: 1.7;
-  color: #444444;
-  max-width: 620px;
+  margin: 38px 0 0;
+  font-size: clamp(22px, 3.2vw, 38px);
+  line-height: 1.27;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  max-width: 880px;
 }
 
-.about-profile-card {
-  padding: 0;
-  background: transparent;
+.about-intro a,
+.about-links a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--line-strong);
+}
+
+.about-links {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 10px;
+  gap: 28px;
+  align-items: center;
 }
 
-.me-image {
-  width: 100%;
-  max-width: 220px;
-  height: auto;
-  border-radius: 0;
-  object-fit: cover;
-  border: 1px solid #d9d9d9;
-}
-
-.about-profile-meta {
-  margin: 0;
-  color: #222222;
+.about-links a {
   font-size: 14px;
+  text-decoration: none;
 }
 
-.about-profile-meta-muted {
-  color: #777777;
+.about-links a:hover,
+.about-intro a:hover {
+  color: var(--accent);
 }
 
-.about-socials {
-  margin-top: 22px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.about-socials a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 0;
-  border: 1px solid #d9d9d9;
-  color: #222222;
-  background: #ffffff;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.about-socials a:hover {
-  border-color: #111111;
-  color: #111111;
-}
-
-.about-socials svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
+.about-links span {
+  color: var(--muted);
 }
 
 .about-main-grid {
   display: grid;
-  gap: 40px;
-  align-items: start;
+  gap: 0;
 }
 
-.about-side-card {
-  padding-top: 24px;
-  background: transparent;
-  border-top: 1px solid #e3e3e3;
+.about-side-card,
+.about-newsletter {
+  padding: 42px 0 72px;
+  border-top: 1px solid var(--line);
 }
 
-.newsletter-section {
-  background: transparent;
-  border-top: 1px solid #e3e3e3;
+.about-newsletter {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 32px;
 }
 
 .newsletter-copy {
-  margin: 0 0 18px;
-  color: #555555;
+  max-width: 560px;
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.55;
 }
 
-.newsletter-section iframe {
+.about-newsletter iframe {
   width: 100%;
-  border-radius: 0;
-  background: #fff;
-  border: 1px solid #e3e3e3;
+  background: var(--paper);
 }
 
 @media (max-width: 900px) {
   .about-hero {
-    grid-template-columns: 1fr;
-    gap: 28px;
-  }
-
-  .about-left-stack,
-  .about-main-grid {
-    gap: 28px;
+    min-height: 560px;
+    padding-top: 80px;
   }
 }
 
 @media (max-width: 640px) {
-  .about-copy-column h1 {
-    font-size: 34px;
+  .about-me-container {
+    width: min(100% - 32px, 1120px);
+  }
+
+  .about-hero {
+    min-height: 520px;
+    padding: 64px 0 48px;
   }
 
   .about-intro {
-    font-size: 16px;
+    margin-top: 28px;
+  }
+
+  .about-links {
+    gap: 20px;
+  }
+
+  .about-side-card,
+  .about-newsletter {
+    padding: 32px 0 52px;
+  }
+
+  .about-newsletter {
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 }

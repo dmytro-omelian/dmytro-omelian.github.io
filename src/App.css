@@ -5,52 +5,15 @@
 }
 
 body {
-  font-family: "Merriweather", serif;
-  font-weight: 300;
-  font-style: normal;
+  font-weight: 400;
   line-height: 1.6;
-  color: #333;
-}
-
-nav ul {
-  list-style: none;
-  display: flex;
-  justify-content: center;
-}
-
-nav ul li {
-  margin: 0 10px;
-}
-
-nav ul li a {
-  color: #fff;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-nav ul li a:hover {
-  color: #f4f4f4;
 }
 
 main {
-  padding: 20px;
-}
-
-.about,
-.experience,
-.books {
-  padding: 20px;
-  margin: 20px 0;
+  padding: 0;
 }
 
 .section {
-  margin-bottom: 20px;
-}
-
-.about img {
-  max-width: 100%;
-  height: auto;
-  display: block;
   margin-bottom: 20px;
 }
 
@@ -76,5 +39,5 @@ main {
 }
 
 .content {
-  flex: 1; /* Allows the content to expand and push the footer down */
+  flex: 1;
 }

@@ -1,15 +1,22 @@
 .contact-page {
-  max-width: 600px;
+  width: min(820px, calc(100% - 48px));
+  max-width: none;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 92px 0 120px;
 }
 
 .contact-page h2 {
-  margin-bottom: 0.75rem;
+  margin: 0 0 36px;
+  font-size: clamp(52px, 8vw, 96px);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  font-weight: 560;
 }
 
 .contact-page p {
-  margin-bottom: 1.5rem;
+  margin-bottom: 48px;
+  color: var(--muted);
+  font-size: 18px;
 }
 
 .contact-list {
@@ -21,7 +28,9 @@
 .contact-list li {
   display: flex;
   align-items: center;
-  margin-bottom: 0.75rem;
+  padding: 14px 0;
+  margin: 0;
+  border-top: 1px solid var(--line);
 }
 
 .contact-icon {
@@ -30,23 +39,10 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
   margin-right: 0.6rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #fff;
-}
-
-.contact-icon-email {
-  background-color: #555;
-}
-
-.contact-icon-linkedin {
-  background-color: #0a66c2;
-}
-
-.contact-icon-x {
-  background-color: #000;
+  color: var(--muted);
 }
 
 .contact-list a {
@@ -55,5 +51,12 @@
 }
 
 .contact-list a:hover {
-  text-decoration: underline;
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .contact-page {
+    width: min(100% - 32px, 820px);
+    padding: 64px 0 84px;
+  }
 }

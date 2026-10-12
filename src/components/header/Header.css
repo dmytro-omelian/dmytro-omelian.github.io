@@ -1,43 +1,59 @@
 .site-header {
-  color: #000; /* The text color appears to be black, not white (#fff) as in your original CSS */
-  padding: 1rem 0;
-  text-align: center;
-  border-bottom: 3px solid green; /* Adjust the color to match the image */
+  width: 100%;
+  padding: 28px 0 18px;
 }
 
-.container {
-  width: 80%;
+.site-header-inner {
+  width: min(1120px, calc(100% - 48px));
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.site-header h1 {
-  margin: 0;
-  font-size: 2em; /* Adjust the size as needed */
-}
-
-.site-header nav {
-  text-align: right;
-}
-
-.site-header nav a {
-  color: #000; /* Assuming the links are also black */
-  text-decoration: none;
-  margin-left: 15px; /* Adjust the spacing as needed */
-  font-weight: bold; /* If the links are bold */
-}
-
-.site-header nav a:hover {
-  text-decoration: underline; /* If you want a hover effect */
+  gap: 32px;
 }
 
 .site-name {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   text-decoration: none;
-  color: inherit;
+  white-space: nowrap;
 }
 
-.site-name:hover {
+.site-header nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.site-header nav a {
+  color: var(--muted);
   text-decoration: none;
+  font-size: 14px;
+  transition: color 140ms ease;
+}
+
+.site-header nav a:hover,
+.site-header nav a.active {
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .site-header {
+    padding-top: 22px;
+  }
+
+  .site-header-inner {
+    width: min(100% - 32px, 1120px);
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .site-header nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
 }

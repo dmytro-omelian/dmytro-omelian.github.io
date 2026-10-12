@@ -1,18 +1,24 @@
 .books-list-container {
   flex: 1;
-  width: 80%;
+  width: min(820px, calc(100% - 48px));
   margin: 0 auto;
+  padding: 92px 0 120px;
 }
 
 .books-list-container h2 {
-  font-size: 1.2em;
-  margin-bottom: 20px;
+  max-width: 720px;
+  font-size: clamp(36px, 5.7vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  font-weight: 560;
+  margin: 0 0 72px;
 }
 
 .books-by-year h3 {
-  font-size: 1.5em;
-  /* color: #a00; */
-  margin-bottom: 10px;
+  font-size: 14px;
+  margin: 42px 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
 
 .books-year-count {
@@ -28,8 +34,8 @@
 }
 
 .books-by-year li {
-  margin-bottom: 5px;
-  color: #000;
+  margin-bottom: 8px;
+  color: var(--ink);
 }
 
 .books-by-year li[data-book-meta]:hover::after,
@@ -41,7 +47,7 @@
 /* Add any additional styles you need here */
 
 .books-container-title {
-  margin-top: 5%;
+  margin-top: 0;
 }
 
 
@@ -70,28 +76,28 @@
 .book-title.has-summary {
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: green;
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--line-strong);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .book-title.has-summary:hover,
 .book-title.has-summary:focus-visible {
-  color: #14532d;
+  color: var(--accent);
 }
 
 .book-title-link {
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: #14532d;
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--line-strong);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   color: inherit;
 }
 
 .book-title-link:hover,
 .book-title-link:focus-visible {
-  color: #14532d;
+  color: var(--accent);
 }
 
 .book-title-button:focus-visible,
@@ -237,7 +243,7 @@
 .books-divider {
   margin: 40px 0 16px;
   border: none;
-  border-top: 1px solid #ddd6c8;
+  border-top: 1px solid var(--line);
 }
 
 .books-bookshelf-link {
@@ -247,17 +253,22 @@
 .books-bookshelf-anchor {
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: #14532d;
-  text-decoration-thickness: 2px;
+  text-decoration-color: var(--line-strong);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .books-bookshelf-anchor:hover,
 .books-bookshelf-anchor:focus-visible {
-  color: #14532d;
+  color: var(--accent);
 }
 
 @media (max-width: 600px) {
+  .books-list-container {
+    width: min(100% - 32px, 820px);
+    padding: 64px 0 84px;
+  }
+
   .book-note-overlay {
     padding: 16px 12px;
   }

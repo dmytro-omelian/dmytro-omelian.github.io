@@ -1,17 +1,51 @@
 .experience-container {
   flex: 1;
-  width: 80%;
+  width: min(820px, calc(100% - 48px));
   margin: 0 auto;
+  padding: 92px 0 120px;
+}
+
+.experience-container > h1:first-child {
+  margin-top: 0;
+}
+
+.experience-container h1,
+.experience-container h2 {
+  margin: 96px 0 28px;
+  font-size: clamp(38px, 6vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  font-weight: 560;
 }
 
 .experience-box {
-  margin-top: 15px;
+  padding: 28px 0 34px;
+  border-top: 1px solid var(--line);
+}
+
+.experience-box h3 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.experience-box h4 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.experience-box > p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .descriptions-box {
-  margin-left: 18px;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin: 18px 0 0;
+  padding-left: 20px;
+  color: #34342f;
 }
 
 .tags-box {
@@ -32,5 +66,12 @@
 }
 
 .margin-top {
-  margin-top: 200px;
+  margin-top: 112px !important;
+}
+
+@media (max-width: 640px) {
+  .experience-container {
+    width: min(100% - 32px, 820px);
+    padding: 64px 0 84px;
+  }
 }
