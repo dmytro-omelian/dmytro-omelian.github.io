@@ -14,10 +14,11 @@ import Admin from './components/admin/Admin';
 function AppLayout() {
   const location = useLocation();
   const isAdminRoute = location.pathname === '/admin';
+  const isHomeRoute = location.pathname === '/';
 
   return (
     <div className='app-container'>
-      {!isAdminRoute && <Header />}
+      {!isAdminRoute && !isHomeRoute && <Header />}
       <main className='content'>
         <Routes>
           <Route path="/" element={<About />} />
@@ -30,7 +31,7 @@ function AppLayout() {
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </main>
-      {!isAdminRoute && <Footer />}
+      {!isAdminRoute && !isHomeRoute && <Footer />}
     </div>
   );
 }

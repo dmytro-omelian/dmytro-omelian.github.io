@@ -1,9 +1,9 @@
 :root {
-  --paper: #f4f3ed;
-  --ink: #171714;
-  --muted: #696961;
-  --line: #d4d3ca;
-  --line-strong: #9a9a90;
+  --paper: #fffcf0;
+  --ink: #100f0f;
+  --muted: #878580;
+  --line: #e6e4dc;
+  --line-strong: #b7b5ac;
   --accent: #195b3a;
 }
 
@@ -15,7 +15,7 @@ html {
 body {
   margin: 0;
   background: var(--paper);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "IBM Plex Sans", Helvetica, Arial, sans-serif;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

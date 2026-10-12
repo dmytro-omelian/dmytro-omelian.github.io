@@ -284,9 +284,9 @@ function getAboutProfile() {
   return {
     name: 'Dima Omelian',
     role: 'Founder',
-    location: 'San Francisco, USA',
+    location: 'Warsaw, Poland',
     nationality: 'Ukrainian',
-    summary: 'Ukrainian founder in San Francisco, building SaveNest and writing Learned Anyway.',
+    summary: 'Ukrainian founder based in Warsaw, building SaveNest and writing Learned Anyway.',
     focusAreas: [
       'startup building',
       'writing in public',

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './News.css';
 
 const newsItems = [
-    { date: "Oct 2026", description: "Started my startup journey and moved to San Francisco" },
+    { date: "Oct 2026", description: "Started my startup journey and came to San Francisco for a month" },
     { date: "Sep 2026", description: "Left AiSDR after 3 years" },
     { date: "Jan 2026", description: "Moved to Warsaw, Poland" },
     { date: "Jan 2026", description: "Started working on x-ai-agent pet-project and doing some social engineering there :)" },
@@ -91,7 +91,7 @@ const News = () => {
 
     return (
         <div className="news-container">
-            <h2>News</h2>
+            <h2>now</h2>
             {visibleItems.map((item, index) => (
                 <div className="news-item" key={index}>
                     <div className="news-date">{item.date}</div>

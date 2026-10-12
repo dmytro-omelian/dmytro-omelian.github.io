@@ -6,7 +6,7 @@ function Experience() {
         {
             title: "Founder",
             company: "SaveNest",
-            city: "San Francisco, USA",
+            city: "Warsaw, Poland",
             dates: "Oct 2026 - Present",
             descriptions: [
                 "Building a private, searchable home for pages people do not want to lose",
