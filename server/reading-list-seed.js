@@ -49,6 +49,17 @@ function assignSeedSlugs(entries) {
 const legacyReadingListEntries = assignSeedSlugs([
   ...createSeedEntries(2026, [
     {
+      title: 'The Infinite Game',
+      author: 'Simon Sinek',
+      finishedOn: '2026-10-03',
+      score: 4.5,
+    },
+    {
+      title: 'The Hard Thing About Hard Things',
+      author: 'Ben Horowitz',
+      finishedOn: '2026-09-07',
+    },
+    {
       title: "🔥 An Astronaut's Guide to Life on Earth",
       author: 'Chris Hadfield',
       finishedOn: '2026-07-19',

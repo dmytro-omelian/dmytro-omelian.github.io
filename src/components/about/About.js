@@ -11,7 +11,8 @@ const projects = [
         type: 'macOS app',
         year: '2026',
         status: 'active',
-        description: 'A private, searchable home for pages you don\'t want to lose.',
+        role: 'Founder',
+        description: 'A private, searchable home for tabs you don\'t want to lose.',
     },
     {
         name: 'x-ai-agent',
@@ -19,6 +20,7 @@ const projects = [
         type: 'growth agent',
         year: '2026',
         status: 'active',
+        role: 'Founder',
         description: 'X replies as ads · 1.5M+ views · 1.5k–3k replies per $50.',
     },
     {
@@ -43,6 +45,7 @@ const projects = [
         type: 'web app',
         year: '2025',
         status: 'closed',
+        role: 'Founder',
         description: 'Reached 100 users and made the first $60.',
     },
     {
@@ -50,7 +53,37 @@ const projects = [
         type: 'startup',
         year: '2023',
         status: 'finished',
+        role: 'Founder',
         description: 'Won AI HOUSE Camp and Student Startup Battle · raised a $5k grant.',
+    },
+];
+
+const work = [
+    {
+        company: 'AiSDR',
+        role: 'Software Engineer',
+        years: '2023–2026',
+        url: 'https://aisdr.com',
+        description: 'Built an AI sales platform at a YC-backed startup.',
+    },
+    {
+        company: 'Ideas Center UCU',
+        role: 'Project Manager',
+        years: '2024–2025',
+        url: 'https://ideascenter.ucu.edu.ua/',
+        description: 'Ran IdeasLab batches, mentored student startups, and built the center website.',
+    },
+    {
+        company: 'Harmix',
+        role: 'Machine Learning Engineer',
+        years: '2023',
+        description: 'Worked on music analysis and audio processing.',
+    },
+    {
+        company: 'Micro Focus',
+        role: 'Junior Software Engineer',
+        years: '2021–2022',
+        description: 'Built backend features for ALM Octane.',
     },
 ];
 
@@ -64,9 +97,9 @@ const getWritingDayCount = () => {
 };
 
 const recentPosts = posts
-    .filter((post) => post.externalUrl)
+    .filter((post) => post.externalUrl || post.substackUrl)
     .filter((post, index, items) => (
-        items.findIndex((item) => item.externalUrl === post.externalUrl) === index
+        items.findIndex((item) => (item.externalUrl || item.substackUrl) === (post.externalUrl || post.substackUrl)) === index
     ))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 4);
@@ -79,6 +112,7 @@ function ProjectItem({ project, writingDayCount }) {
         <>
             <span className="about-list-line">
                 <span className="about-list-title">{project.name}</span>
+                {project.role && <span className="about-list-role">{project.role}</span>}
                 <span className="about-list-dots" aria-hidden="true" />
                 <span className="about-list-meta">{project.type}</span>
                 <span className="about-list-year">{project.year}</span>
@@ -127,7 +161,7 @@ function About() {
                 <h1><span aria-hidden="true">👋</span> hi, i&apos;m <strong>Dima</strong></h1>
                 <p className="about-kicker">Founder</p>
                 <p className="about-intro">
-                    Ukrainian founder based in Warsaw. In San Francisco for October, building <a href="https://savenest.app" target="_blank" rel="noreferrer">SaveNest</a>.
+                    Ukrainian founder back in Warsaw after a month in San Francisco. All in on building <a href="https://savenest.app" target="_blank" rel="noreferrer">SaveNest</a>.
                 </p>
                 <div className="about-links" aria-label="Social links">
                     <a href="https://twitter.com/intent/user?screen_name=dmytroomelian" target="_blank" rel="noreferrer">X</a>
@@ -136,6 +170,7 @@ function About() {
                 </div>
                 <nav className="about-nav" aria-label="Homepage sections">
                     <a href="#projects">projects</a>
+                    <a href="#experience">experience</a>
                     <Link to="/blog">writing</Link>
                     <Link to="/books">books</Link>
                     <a href="#now">now</a>
@@ -155,11 +190,35 @@ function About() {
                     </div>
                 </section>
 
+                <section className="about-section" id="experience">
+                    <h2>experience</h2>
+                    <div className="about-list">
+                        {work.map((job) => {
+                            const content = (
+                                <>
+                                    <span className="about-list-line">
+                                        <span className="about-list-title">{job.company}</span>
+                                        <span className="about-list-dots" aria-hidden="true" />
+                                        <span className="about-list-meta">{job.role}</span>
+                                        <span className="about-list-year">{job.years}</span>
+                                    </span>
+                                    <span className="about-list-description">{job.description}</span>
+                                </>
+                            );
+
+                            return job.url
+                                ? <a className="about-list-item" href={job.url} target="_blank" rel="noreferrer" key={job.company}>{content}</a>
+                                : <div className="about-list-item about-list-item-static" key={job.company}>{content}</div>;
+                        })}
+                    </div>
+                    <Link className="about-more-link" to="/experience">full experience</Link>
+                </section>
+
                 <section className="about-section">
                     <h2>writing</h2>
                     <div className="about-list about-writing-list">
                         {recentPosts.map((post) => (
-                            <a className="about-list-item" href={post.externalUrl} target="_blank" rel="noreferrer" key={post.externalUrl}>
+                            <a className="about-list-item" href={post.externalUrl || post.substackUrl} target="_blank" rel="noreferrer" key={post.externalUrl || post.substackUrl}>
                                 <span className="about-list-line">
                                     <span className="about-list-title">{post.title}</span>
                                     <span className="about-list-dots" aria-hidden="true" />

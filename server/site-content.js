@@ -147,6 +147,7 @@ function normalizePost(post) {
     date: String(post.date || '').trim(),
     preview: String(post.preview || '').trim(),
     externalUrl: String(post.externalUrl || '').trim(),
+    substackUrl: String(post.substackUrl || '').trim(),
     image: post.image && typeof post.image === 'object'
       ? {
         src: String(post.image.src || '').trim(),
@@ -468,6 +469,10 @@ function renderBlogPostMarkdown(post, { viewCount, commentCount } = {}) {
     addExternalStats(metadata, post.externalStats);
   }
 
+  if (post.substackUrl) {
+    metadata.push(`- Published on Substack: ${post.substackUrl}`);
+  }
+
   if (typeof viewCount === 'number') {
     metadata.push(`- Views: ${viewCount}`);
   }
@@ -520,7 +525,7 @@ function renderBlogIndexMarkdown(posts, { viewCounts = {}, commentCounts = {} } 
         }
       }
 
-      const href = post.externalUrl || `portfolio://blog/${post.slug}`;
+      const href = post.externalUrl || post.substackUrl || `portfolio://blog/${post.slug}`;
       const statsText = stats.length > 0 ? ` (${stats.join(', ')})` : '';
       return `- ${post.date}: [${post.title}](${href})${statsText}\n  ${post.preview}`;
     }),

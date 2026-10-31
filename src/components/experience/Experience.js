@@ -9,7 +9,7 @@ function Experience() {
             city: "Warsaw, Poland",
             dates: "Oct 2026 - Present",
             descriptions: [
-                "Building a private, searchable home for pages people do not want to lose",
+                "Building a private, searchable home for tabs people do not want to lose",
             ]
         },
         {
@@ -39,7 +39,7 @@ function Experience() {
             descriptions: ["Assisted in teaching football analytics course to university students"]
         },
         {
-            title: "Co-Founder & COO",
+            title: "Founder & COO",
             company: "Hearify",
             dates: "March 2023 - Nov 2023",
             descriptions: [
@@ -189,8 +189,6 @@ function Experience() {
 
     return (
         <div className='experience-container'>
-            <h1>Education</h1>
-            <p>2020-2024 Kyiv Polytechnic Institute (Software Engineering)</p>
             <h1>Experience</h1>
             {experiences.map((exp, index) => (
                 <div className='experience-box' key={index}>
@@ -211,6 +209,8 @@ function Experience() {
                     )}
                 </div>
             ))}
+            <h2>Education</h2>
+            <p>2020–2024 · Kyiv Polytechnic Institute · Software Engineering</p>
             <h2 className='margin-top'>Courses & Internships</h2>
             {internships.map((exp, index) => (
                 <div className='experience-box' key={index}>

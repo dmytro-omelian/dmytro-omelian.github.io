@@ -1,20 +1,20 @@
 .bookshelf-container {
   flex: 1;
-  width: min(820px, calc(100% - 48px));
+  width: min(680px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 92px 0 120px;
+  padding: 76px 0 110px;
 }
 
 .bookshelf-container-title {
   margin-top: 0;
 }
 
-.bookshelf-container h2 {
-  font-size: clamp(36px, 5.7vw, 64px);
-  line-height: 1.05;
-  letter-spacing: -0.05em;
+.bookshelf-container .bookshelf-container-title {
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.045em;
   font-weight: 560;
-  margin-bottom: 52px;
+  margin-bottom: 36px;
 }
 
 .bookshelf-section {
@@ -144,7 +144,7 @@
 
 @media (max-width: 640px) {
   .bookshelf-container {
-    width: min(100% - 32px, 820px);
+    width: min(100% - 32px, 680px);
     padding: 64px 0 84px;
   }
 }

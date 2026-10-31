@@ -8,6 +8,15 @@ import './Posts.css';
 
 export const posts = [
     {
+        id: 16,
+        slug: "why-good-writing-still-gets-ignored",
+        title: "Why Good Writing Still Gets Ignored",
+        author: "Dima Omelian",
+        date: "July 5, 2026",
+        preview: "What I am learning about the gap between writing something good and getting it read.",
+        externalUrl: "https://domelian.substack.com/p/why-good-writing-still-gets-ignored",
+    },
+    {
         id: 15,
         slug: "my-first-time-in-stockholm-thanks",
         title: "My first time in Stockholm (thanks, YC!)",
@@ -64,10 +73,11 @@ export const posts = [
     {
         id: 9,
         slug: "dopamine",
-        title: "dopamine",
+        title: "Hard blockers plus *mind work*",
         author: "Dima Omelian",
         date: "April 17, 2026",
-        preview: "i was 17 when i first noticed it. six years into the fight with screens, dopamine, and a brain that always finds the workaround.",
+        preview: "I was 17 when I first noticed it.",
+        substackUrl: "https://domelian.substack.com/p/dopamine",
         content: [
             "i was 17 when i first noticed it.",
             "i had been watching youtube for what i thought was 30 minutes, looked up, and 2–3 hours had passed. that feeling — the one where you can't remember what you actually watched, you just know it's gone — was the first thing about a screen that scared me.",
@@ -280,9 +290,10 @@ export const posts = [
     {
         id: 5,
         slug: "now-i-see-how-it-is-coming",
-        title: "Now I See How It Is Coming",
+        title: "Now I see how it is coming",
         author: "Dima Omelian",
         date: "March 9, 2026",
+        substackUrl: "https://domelian.substack.com/p/now-i-see-how-it-is-coming",
         preview: "You're paying $9.99 a month for an app that does three things you care about and forty-seven you don't.",
         content: [
             "You're paying $9.99 a month for an app that does three things you care about and forty-seven you don't.",
@@ -390,9 +401,10 @@ export const posts = [
     {
         id: 1,
         slug: "trying-to-experiment-with-different-concepts-of-writing",
-        title: "Trying to experiment with different concepts of writing",
+        title: "Here is my first piece that marks the beginning of it all",
         date: "December 20, 2025",
-        preview: "Before I've already been writing for the last 400 days, mostly on LinkedIn. A few months ago, I started using X. For now, I'm not sure about my goals...",
+        preview: "Why do I think it would not work out?",
+        substackUrl: "https://domelian.substack.com/p/first-one",
         content: [
             "Trying to experiment with different concepts of writing.",
             "Before I've already been writing for the last 400 days, mostly on LinkedIn. A few months ago, I started using X. For now, I'm not sure about my goals or what I want to achieve with it, but my motivation is pretty simple: it helps me think more clearly.",
@@ -407,8 +419,9 @@ export const posts = [
     {
         id: 2,
         slug: "2025-year-in-review-building-momentum-through-systems",
-        title: "2025 Year in Review",
+        title: "My 2025 year in review",
         date: "December 29, 2025",
+        substackUrl: "https://domelian.substack.com/p/2025-year-in-review",
         preview: "2025 was about building momentum through systems: shipping at AiSDR, testing prototypes with real people, writing in public, growing up fast, and using tiny habits to turn time into compounding.",
         content: [
             "If I had to describe this year in one sentence, it would be: 2025 was about building momentum through systems.",
@@ -478,7 +491,8 @@ function PostMeta({ date, viewCount, commentCount, discussionHref, selected = fa
 }
 
 function PostListItem({ post, viewsBySlug, commentCountsBySlug }) {
-    const isExternalPost = Boolean(post.externalUrl);
+    const publishedUrl = post.externalUrl || post.substackUrl;
+    const isExternalPost = Boolean(publishedUrl);
     const className = `post-item${post.image ? ' post-item-with-image' : ''}${isExternalPost ? ' post-item-external' : ''}`;
     const content = (
         <>
@@ -516,7 +530,7 @@ function PostListItem({ post, viewsBySlug, commentCountsBySlug }) {
         return (
             <a
                 key={post.id}
-                href={post.externalUrl}
+                href={publishedUrl}
                 className={className}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -643,7 +657,7 @@ function Posts() {
     useEffect(() => {
         let isActive = true;
         const localPostSlugs = posts
-            .filter((post) => !post.externalUrl)
+            .filter((post) => !post.externalUrl && !post.substackUrl)
             .map((post) => post.slug);
 
         getCommentCounts(localPostSlugs)
@@ -670,8 +684,8 @@ function Posts() {
                     .slice()
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .filter((post, index, items) => {
-                        const key = post.externalUrl || post.slug;
-                        return items.findIndex((item) => (item.externalUrl || item.slug) === key) === index;
+                        const key = post.externalUrl || post.substackUrl || post.slug;
+                        return items.findIndex((item) => (item.externalUrl || item.substackUrl || item.slug) === key) === index;
                     })
                     .map(post => (
                         <PostListItem

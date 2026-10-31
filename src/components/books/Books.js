@@ -46,7 +46,8 @@ function Books() {
 
   return (
     <div className="books-list-container">
-      <h2 className="books-container-title">An incomplete list of books that I&apos;ve been reading lately...</h2>
+      <h1 className="books-container-title">Books I&apos;ve read</h1>
+      <p className="books-container-intro">An incomplete list of what I&apos;ve been reading lately.</p>
 
       {isLoadingBooks && <p className="books-feedback">Loading reading list...</p>}
       {!isLoadingBooks && booksError && <p className="books-feedback books-feedback-error">{booksError}</p>}

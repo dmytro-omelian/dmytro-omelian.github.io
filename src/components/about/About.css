@@ -162,6 +162,12 @@
   transition: color 140ms ease;
 }
 
+.about-list-role {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .about-list-title span {
   color: var(--muted);
   font-weight: 400;
@@ -242,7 +248,38 @@
     margin-top: 18px;
   }
 
+  .about-nav {
+    gap: 5px;
+  }
+
+  .about-nav a {
+    gap: 5px;
+    font-size: 11px;
+  }
+
   .about-section {
     padding: 20px 0 26px;
+  }
+}
+
+@media (max-width: 420px) {
+  #experience .about-list-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 0;
+  }
+
+  #experience .about-list-dots {
+    display: none;
+  }
+
+  #experience .about-list-meta {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #experience .about-list-year {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
