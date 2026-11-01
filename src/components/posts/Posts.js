@@ -8,6 +8,24 @@ import './Posts.css';
 
 export const posts = [
     {
+        id: 18,
+        slug: "my-monthly-wlog-in-sf-26-days",
+        title: "My monthly wlog in SF: 26 days",
+        author: "Dima Omelian",
+        date: "October 30, 2026",
+        preview: "October 2026. Trying to understand the city, the people, and what I want to build.",
+        externalUrl: "https://domelian.substack.com/p/my-monthly-wlog-in-sf-26-days",
+    },
+    {
+        id: 17,
+        slug: "learning-the-social-rules-of-san",
+        title: "Learning the social rules of San Francisco",
+        author: "Dima Omelian",
+        date: "October 16, 2026",
+        preview: "DISCLAIMER: You might disagree with some of these points, and I’d be happy to discuss them and learn more.",
+        externalUrl: "https://domelian.substack.com/p/learning-the-social-rules-of-san",
+    },
+    {
         id: 16,
         slug: "why-good-writing-still-gets-ignored",
         title: "Why Good Writing Still Gets Ignored",

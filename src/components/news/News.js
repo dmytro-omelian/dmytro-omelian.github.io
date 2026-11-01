@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './News.css';
 
 const newsItems = [
-    { date: "Oct 2026", description: "Back from San Francisco. All in on building SaveNest." },
+    { date: "Nov 2026", description: "Back from San Francisco. All in on building SaveNest." },
     { date: "Oct 2026", description: "Started my startup journey and came to San Francisco for a month" },
     { date: "Sep 2026", description: "Left AiSDR after 3 years" },
     { date: "Jan 2026", description: "Moved to Warsaw, Poland" },
