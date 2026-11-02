@@ -13,7 +13,7 @@ export const posts = [
         title: "My wlog in SF: October, 2026",
         author: "Dima Omelian",
         date: "October 30, 2026",
-        preview: "October 2026. Trying to understand the city, the people, and what I want to build.",
+        preview: "Trying to understand the city, the people, and what I want to build.",
         externalUrl: "https://domelian.substack.com/p/my-monthly-wlog-in-sf-26-days",
     },
     {
