@@ -161,7 +161,7 @@ function About() {
                 <h1><span aria-hidden="true">👋</span> hi, i&apos;m <strong>Dima</strong></h1>
                 <p className="about-kicker">Founder</p>
                 <p className="about-intro">
-                    Ukrainian founder back in Warsaw after a month in San Francisco. All in on building <a href="https://savenest.app" target="_blank" rel="noreferrer">SaveNest</a>.
+                    Ukrainian founder back in Warsaw after a month in San Francisco. All in building.
                 </p>
                 <div className="about-links" aria-label="Social links">
                     <a href="https://twitter.com/intent/user?screen_name=dmytroomelian" target="_blank" rel="noreferrer">X</a>
