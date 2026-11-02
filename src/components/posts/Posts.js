@@ -10,7 +10,7 @@ export const posts = [
     {
         id: 18,
         slug: "my-monthly-wlog-in-sf-26-days",
-        title: "My monthly wlog in SF: 26 days",
+        title: "My wlog in SF: October, 2026",
         author: "Dima Omelian",
         date: "October 30, 2026",
         preview: "October 2026. Trying to understand the city, the people, and what I want to build.",
